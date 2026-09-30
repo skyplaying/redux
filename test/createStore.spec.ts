@@ -1,4 +1,6 @@
-import { createStore, combineReducers, StoreEnhancer, Action, Store } from '..'
+import type { StoreEnhancer, Action, Store, Reducer } from 'redux'
+import { createStore, combineReducers } from 'redux'
+import { vi } from 'vitest'
 import {
   addTodo,
   dispatchInMiddle,
@@ -9,7 +11,8 @@ import {
   unknownAction
 } from './helpers/actionCreators'
 import * as reducers from './helpers/reducers'
-import { from, ObservableInput } from 'rxjs'
+import type { ObservableInput } from 'rxjs'
+import { from } from 'rxjs'
 import { map } from 'rxjs/operators'
 import $$observable from '../src/utils/symbol-observable'
 
@@ -58,6 +61,7 @@ describe('createStore', () => {
     const store = createStore(reducers.todos)
     expect(store.getState()).toEqual([])
 
+    // @ts-expect-error
     store.dispatch(unknownAction())
     expect(store.getState()).toEqual([])
 
@@ -96,6 +100,7 @@ describe('createStore', () => {
       }
     ])
 
+    // @ts-expect-error
     store.dispatch(unknownAction())
     expect(store.getState()).toEqual([
       {
@@ -199,14 +204,16 @@ describe('createStore', () => {
 
   it('supports multiple subscriptions', () => {
     const store = createStore(reducers.todos)
-    const listenerA = jest.fn()
-    const listenerB = jest.fn()
+    const listenerA = vi.fn()
+    const listenerB = vi.fn()
 
     let unsubscribeA = store.subscribe(listenerA)
+    // @ts-expect-error
     store.dispatch(unknownAction())
     expect(listenerA.mock.calls.length).toBe(1)
     expect(listenerB.mock.calls.length).toBe(0)
 
+    // @ts-expect-error
     store.dispatch(unknownAction())
     expect(listenerA.mock.calls.length).toBe(2)
     expect(listenerB.mock.calls.length).toBe(0)
@@ -215,6 +222,7 @@ describe('createStore', () => {
     expect(listenerA.mock.calls.length).toBe(2)
     expect(listenerB.mock.calls.length).toBe(0)
 
+    // @ts-expect-error
     store.dispatch(unknownAction())
     expect(listenerA.mock.calls.length).toBe(3)
     expect(listenerB.mock.calls.length).toBe(1)
@@ -223,6 +231,7 @@ describe('createStore', () => {
     expect(listenerA.mock.calls.length).toBe(3)
     expect(listenerB.mock.calls.length).toBe(1)
 
+    // @ts-expect-error
     store.dispatch(unknownAction())
     expect(listenerA.mock.calls.length).toBe(3)
     expect(listenerB.mock.calls.length).toBe(2)
@@ -231,6 +240,7 @@ describe('createStore', () => {
     expect(listenerA.mock.calls.length).toBe(3)
     expect(listenerB.mock.calls.length).toBe(2)
 
+    // @ts-expect-error
     store.dispatch(unknownAction())
     expect(listenerA.mock.calls.length).toBe(3)
     expect(listenerB.mock.calls.length).toBe(2)
@@ -239,6 +249,7 @@ describe('createStore', () => {
     expect(listenerA.mock.calls.length).toBe(3)
     expect(listenerB.mock.calls.length).toBe(2)
 
+    // @ts-expect-error
     store.dispatch(unknownAction())
     expect(listenerA.mock.calls.length).toBe(4)
     expect(listenerB.mock.calls.length).toBe(2)
@@ -246,8 +257,8 @@ describe('createStore', () => {
 
   it('only removes listener once when unsubscribe is called', () => {
     const store = createStore(reducers.todos)
-    const listenerA = jest.fn()
-    const listenerB = jest.fn()
+    const listenerA = vi.fn()
+    const listenerB = vi.fn()
 
     const unsubscribeA = store.subscribe(listenerA)
     store.subscribe(listenerB)
@@ -255,6 +266,7 @@ describe('createStore', () => {
     unsubscribeA()
     unsubscribeA()
 
+    // @ts-expect-error
     store.dispatch(unknownAction())
     expect(listenerA.mock.calls.length).toBe(0)
     expect(listenerB.mock.calls.length).toBe(1)
@@ -262,7 +274,7 @@ describe('createStore', () => {
 
   it('only removes relevant listener when unsubscribe is called', () => {
     const store = createStore(reducers.todos)
-    const listener = jest.fn()
+    const listener = vi.fn()
 
     store.subscribe(listener)
     const unsubscribeSecond = store.subscribe(listener)
@@ -270,15 +282,16 @@ describe('createStore', () => {
     unsubscribeSecond()
     unsubscribeSecond()
 
+    // @ts-expect-error
     store.dispatch(unknownAction())
     expect(listener.mock.calls.length).toBe(1)
   })
 
   it('supports removing a subscription within a subscription', () => {
     const store = createStore(reducers.todos)
-    const listenerA = jest.fn()
-    const listenerB = jest.fn()
-    const listenerC = jest.fn()
+    const listenerA = vi.fn()
+    const listenerB = vi.fn()
+    const listenerC = vi.fn()
 
     store.subscribe(listenerA)
     const unSubB = store.subscribe(() => {
@@ -287,7 +300,9 @@ describe('createStore', () => {
     })
     store.subscribe(listenerC)
 
+    // @ts-expect-error
     store.dispatch(unknownAction())
+    // @ts-expect-error
     store.dispatch(unknownAction())
 
     expect(listenerA.mock.calls.length).toBe(2)
@@ -302,9 +317,9 @@ describe('createStore', () => {
     const doUnsubscribeAll = () =>
       unsubscribeHandles.forEach(unsubscribe => unsubscribe())
 
-    const listener1 = jest.fn()
-    const listener2 = jest.fn()
-    const listener3 = jest.fn()
+    const listener1 = vi.fn()
+    const listener2 = vi.fn()
+    const listener3 = vi.fn()
 
     unsubscribeHandles.push(store.subscribe(() => listener1()))
     unsubscribeHandles.push(
@@ -315,11 +330,13 @@ describe('createStore', () => {
     )
     unsubscribeHandles.push(store.subscribe(() => listener3()))
 
+    // @ts-expect-error
     store.dispatch(unknownAction())
     expect(listener1.mock.calls.length).toBe(1)
     expect(listener2.mock.calls.length).toBe(1)
     expect(listener3.mock.calls.length).toBe(1)
 
+    // @ts-expect-error
     store.dispatch(unknownAction())
     expect(listener1.mock.calls.length).toBe(1)
     expect(listener2.mock.calls.length).toBe(1)
@@ -329,9 +346,9 @@ describe('createStore', () => {
   it('notifies only subscribers active at the moment of current dispatch', () => {
     const store = createStore(reducers.todos)
 
-    const listener1 = jest.fn()
-    const listener2 = jest.fn()
-    const listener3 = jest.fn()
+    const listener1 = vi.fn()
+    const listener2 = vi.fn()
+    const listener3 = vi.fn()
 
     let listener3Added = false
     const maybeAddThirdListener = () => {
@@ -347,11 +364,13 @@ describe('createStore', () => {
       maybeAddThirdListener()
     })
 
+    // @ts-expect-error
     store.dispatch(unknownAction())
     expect(listener1.mock.calls.length).toBe(1)
     expect(listener2.mock.calls.length).toBe(1)
     expect(listener3.mock.calls.length).toBe(0)
 
+    // @ts-expect-error
     store.dispatch(unknownAction())
     expect(listener1.mock.calls.length).toBe(2)
     expect(listener2.mock.calls.length).toBe(2)
@@ -361,10 +380,10 @@ describe('createStore', () => {
   it('uses the last snapshot of subscribers during nested dispatch', () => {
     const store = createStore(reducers.todos)
 
-    const listener1 = jest.fn()
-    const listener2 = jest.fn()
-    const listener3 = jest.fn()
-    const listener4 = jest.fn()
+    const listener1 = vi.fn()
+    const listener2 = vi.fn()
+    const listener3 = vi.fn()
+    const listener4 = vi.fn()
 
     let unsubscribe4: any
     const unsubscribe1 = store.subscribe(() => {
@@ -376,6 +395,7 @@ describe('createStore', () => {
 
       unsubscribe1()
       unsubscribe4 = store.subscribe(listener4)
+      // @ts-expect-error
       store.dispatch(unknownAction())
 
       expect(listener1.mock.calls.length).toBe(1)
@@ -386,6 +406,7 @@ describe('createStore', () => {
     store.subscribe(listener2)
     store.subscribe(listener3)
 
+    // @ts-expect-error
     store.dispatch(unknownAction())
     expect(listener1.mock.calls.length).toBe(1)
     expect(listener2.mock.calls.length).toBe(2)
@@ -393,6 +414,7 @@ describe('createStore', () => {
     expect(listener4.mock.calls.length).toBe(1)
 
     unsubscribe4()
+    // @ts-expect-error
     store.dispatch(unknownAction())
     expect(listener1.mock.calls.length).toBe(1)
     expect(listener2.mock.calls.length).toBe(3)
@@ -400,31 +422,46 @@ describe('createStore', () => {
     expect(listener4.mock.calls.length).toBe(1)
   })
 
-  it('provides an up-to-date state when a subscriber is notified', done => {
+  it('provides an up-to-date state when a subscriber is notified', async () => {
     const store = createStore(reducers.todos)
+
+    let resolve: (value: unknown) => void = () => {}
+    let promise = new Promise(_resolve => {
+      resolve = _resolve
+    })
     store.subscribe(() => {
-      expect(store.getState()).toEqual([
-        {
-          id: 1,
-          text: 'Hello'
-        }
-      ])
-      done()
+      resolve(store.getState())
     })
     store.dispatch(addTodo('Hello'))
+    const state = await promise
+
+    expect(state).toEqual([
+      {
+        id: 1,
+        text: 'Hello'
+      }
+    ])
   })
 
-  it('does not leak private listeners array', done => {
+  it('does not leak private listeners array', async () => {
     const store = createStore(reducers.todos)
+    let resolve: (value: unknown) => void = () => {}
+    let promise = new Promise(_resolve => {
+      resolve = _resolve
+    })
+
     store.subscribe(function (this: any) {
-      expect(this).toBe(undefined)
-      done()
+      resolve(this)
     })
     store.dispatch(addTodo('Hello'))
+    const result = await promise
+
+    expect(result).toBe(undefined)
   })
 
   it('only accepts plain object actions', () => {
     const store = createStore(reducers.todos)
+    // @ts-expect-error
     expect(() => store.dispatch(unknownAction())).not.toThrow()
 
     function AwesomeMap() {}
@@ -464,6 +501,7 @@ describe('createStore', () => {
 
     expect(() =>
       store.dispatch(
+        // @ts-expect-error
         dispatchInMiddle(store.dispatch.bind(store, unknownAction()))
       )
     ).toThrow(/may not dispatch/)
@@ -506,6 +544,7 @@ describe('createStore', () => {
     const store = createStore(reducers.errorThrowingReducer)
     expect(() => store.dispatch(throwError())).toThrow()
 
+    // @ts-expect-error
     expect(() => store.dispatch(unknownAction())).not.toThrow()
   })
 
@@ -545,17 +584,32 @@ describe('createStore', () => {
 
   it('throws if action type is undefined', () => {
     const store = createStore(reducers.todos)
+    // @ts-expect-error
     expect(() => store.dispatch({ type: undefined })).toThrow(
       /Actions may not have an undefined "type" property/
     )
   })
 
-  it('does not throw if action type is falsy', () => {
+  it('throws if action type is not string', () => {
     const store = createStore(reducers.todos)
-    expect(() => store.dispatch({ type: false })).not.toThrow()
-    expect(() => store.dispatch({ type: 0 })).not.toThrow()
-    expect(() => store.dispatch({ type: null })).not.toThrow()
+    // @ts-expect-error
+    expect(() => store.dispatch({ type: false })).toThrow(
+      /the actual type was: 'boolean'.*Value was: 'false'/
+    )
+    // @ts-expect-error
+    expect(() => store.dispatch({ type: 0 })).toThrow(
+      /the actual type was: 'number'.*Value was: '0'/
+    )
+    // @ts-expect-error
+    expect(() => store.dispatch({ type: null })).toThrow(
+      /the actual type was: 'null'.*Value was: 'null'/
+    )
+    // @ts-expect-error
     expect(() => store.dispatch({ type: '' })).not.toThrow()
+    // @ts-expect-error
+    expect(() => store.dispatch({ type: Symbol('MY_ACTION') })).toThrow(
+      /the actual type was: 'symbol'.*Value was: 'Symbol\(MY_ACTION\)'/
+    )
   })
 
   it('accepts enhancer as the third argument', () => {
@@ -569,7 +623,7 @@ describe('createStore', () => {
         const vanillaStore = vanillaCreateStore(...args)
         return {
           ...vanillaStore,
-          dispatch: jest.fn(vanillaStore.dispatch)
+          dispatch: vi.fn(vanillaStore.dispatch)
         }
       }
 
@@ -595,7 +649,7 @@ describe('createStore', () => {
         const vanillaStore = vanillaCreateStore(...args)
         return {
           ...vanillaStore,
-          dispatch: jest.fn(vanillaStore.dispatch)
+          dispatch: vi.fn(vanillaStore.dispatch)
         }
       }
 
@@ -633,12 +687,14 @@ describe('createStore', () => {
 
     expect(() => createStore(reducers.todos, undefined, x => x)).not.toThrow()
 
-    expect(() => createStore(reducers.todos, x => x)).not.toThrow()
+    expect(() =>
+      createStore<any, reducers.TodoAction, {}, {}>(reducers.todos, x => x)
+    ).not.toThrow()
 
     expect(() => createStore(reducers.todos, [])).not.toThrow()
 
     expect(() =>
-      createStore<any, Action, {}, {}>(reducers.todos, {})
+      createStore<any, reducers.TodoAction, {}, {}>(reducers.todos, {})
     ).not.toThrow()
   })
 
@@ -647,7 +703,12 @@ describe('createStore', () => {
 
     // @ts-expect-error
     expect(() => store.replaceReducer(undefined)).toThrow(
-      'Expected the nextReducer to be a function.'
+      "Expected the nextReducer to be a function. Instead, received: 'undefined'"
+    )
+
+    // @ts-expect-error
+    expect(() => store.replaceReducer(null)).toThrow(
+      "Expected the nextReducer to be a function. Instead, received: 'null'"
     )
 
     expect(() => store.replaceReducer(() => [])).not.toThrow()
@@ -821,22 +882,29 @@ describe('createStore', () => {
 
   it('does not log an error if parts of the current state will be ignored by a nextReducer using combineReducers', () => {
     const originalConsoleError = console.error
-    console.error = jest.fn()
+    console.error = vi.fn()
+
+    const reducer: Reducer<number> = (s = 0) => s
+
+    const yReducer = combineReducers<{
+      z: typeof reducer
+      w?: typeof reducer
+    }>({
+      z: reducer,
+      w: reducer
+    })
 
     const store = createStore(
-      combineReducers({
-        x: (s = 0, _) => s,
-        y: combineReducers({
-          z: (s = 0, _) => s,
-          w: (s = 0, _) => s
-        })
+      combineReducers<{ x?: typeof reducer; y: typeof yReducer }>({
+        x: reducer,
+        y: yReducer
       })
     )
 
     store.replaceReducer(
       combineReducers({
         y: combineReducers({
-          z: (s = 0, _) => s
+          z: reducer
         })
       })
     )

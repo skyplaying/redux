@@ -5,11 +5,16 @@ sidebar_label: Basic Reducer Structure
 description: 'Structuring Reducers > Basic Reducer Structure: Overview of how reducer functions work with Redux state'
 ---
 
+<!-- prettier-ignore -->
+import HandWrittenReducersNote from "../../components/_HandWrittenReducersNote.mdx";
+
 # Basic Reducer Structure and State Shape
+
+<HandWrittenReducersNote />
 
 ## Basic Reducer Structure
 
-First and foremost, it's important to understand that your entire application really only has **one single reducer function**: the function that you've passed into `createStore` as the first argument. That one single reducer function ultimately needs to do several things:
+First and foremost, it's important to understand that your entire application really only has **one single reducer function**: the function that you've passed to the store as the `reducer` option of `configureStore`. That one single reducer function ultimately needs to do several things:
 
 - The first time the reducer is called, the `state` value will be `undefined`. The reducer needs to handle this case by supplying a default state value before handling the incoming action.
 - It needs to look at the previous state and the dispatched action, and determine what kind of work needs to be done
@@ -36,7 +41,7 @@ function counter(state, action) {
 
 Notice that this simple function fulfills all the basic requirements. It returns a default value if none exists, initializing the store; it determines what sort of update needs to be done based on the type of the action, and returns new values; and it returns the previous state if no work needs to be done.
 
-There are some simple tweaks that can be made to this reducer. First, repeated `if`/`else` statements quickly grow tiresome, so it's very common to use `switch` statements instead. Second, we can use ES6's default parameter values to handle the initial "no existing data" case. With those changes, the reducer would look like:
+There are some simple tweaks that can be made to this reducer. First, repeated `if`/`else` statements quickly grow tiresome, so it's very common to use `switch` statements instead. Second, we can use default parameter values to handle the initial "no existing data" case. With those changes, the reducer would look like:
 
 ```js
 function counter(state = 0, action) {

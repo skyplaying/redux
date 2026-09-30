@@ -5,7 +5,12 @@ sidebar_label: Prerequisite Concepts
 description: 'Structuring Reducers > Prerequisite Concepts: Key concepts to understand when using Redux'
 ---
 
+<!-- prettier-ignore -->
+import HandWrittenReducersNote from "../../components/_HandWrittenReducersNote.mdx";
+
 # Prerequisite Reducer Concepts
+
+<HandWrittenReducersNote />
 
 As described in ["Redux Fundamentals" Part 3: State, Actions, and Reducers](../../tutorials/fundamentals/part-3-state-actions-reducers.md), a Redux reducer function:
 
@@ -17,10 +22,10 @@ As described in ["Redux Fundamentals" Part 3: State, Actions, and Reducers](../.
 
 > ##### Note on immutability, side effects, and mutation
 >
-> Mutation is discouraged because it generally breaks time-travel debugging, and React Redux's `connect` function:
+> Mutation is discouraged because it generally breaks time-travel debugging, and React Redux's `useSelector` hook:
 >
 > - For time traveling, the Redux DevTools expect that replaying recorded actions would output a state value, but not change anything else. **Side effects like mutation or asynchronous behavior will cause time travel to alter behavior between steps, breaking the application**.
-> - For React Redux, `connect` checks to see if the props returned from a `mapStateToProps` function have changed in order to determine if a component needs to update. To improve performance, `connect` takes some shortcuts that rely on the state being immutable, and uses shallow reference equality checks to detect changes. This means that **changes made to objects and arrays by direct mutation will not be detected, and components will not re-render**.
+> - For React Redux, `useSelector` compares the value returned by your selector against the previous value by reference to decide whether a component needs to update. This means that **changes made to objects and arrays by direct mutation will not be detected, and components will not re-render**. See [Why isn't my component re-rendering?](../../faq/ReactRedux.md#why-isnt-my-component-re-rendering) in the FAQ.
 >
 > Other side effects like generating unique IDs or timestamps in a reducer also make the code unpredictable and harder to debug and test.
 
@@ -55,8 +60,7 @@ Because of these rules, it's important that the following core concepts are full
 
 **Reading List**:
 
-- [The Little Idea of Functional Programming](http://jaysoo.ca/2016/01/13/functional-programming-little-ideas/)
-- [Understanding Programmatic Side-Effects](https://c2fo.io/c2fo/programming/2016/05/11/understanding-programmatic-side-effects/)
+- [Redux Style Guide: Reducers Must Not Have Side Effects](../../style-guide/style-guide.md#reducers-must-not-have-side-effects)
 - [Learning Functional Programming in Javascript](https://youtu.be/e-5obm1G_FY)
 - [An Introduction to Reasonably Pure Functional Programming](https://www.sitepoint.com/an-introduction-to-reasonably-pure-functional-programming/)
 
@@ -67,13 +71,15 @@ Because of these rules, it's important that the following core concepts are full
 - Mutability vs immutability
 - Immutably updating objects and arrays safely
 - Avoiding functions and statements that mutate state
+- How Immer lets you write "mutating" code that produces immutable updates
 
 **Reading List**:
 
-- [Pros and Cons of Using Immutability With React](https://reactkungfu.com/2015/08/pros-and-cons-of-using-immutability-with-react-js/)
+- [Redux Docs: Immutable Update Patterns](./ImmutableUpdatePatterns.md)
+- [React docs: Updating Objects in State](https://react.dev/learn/updating-objects-in-state) and [Updating Arrays in State](https://react.dev/learn/updating-arrays-in-state)
+- [Immer docs](https://immerjs.github.io/immer/) and [Redux Toolkit: Writing Reducers with Immer](/toolkit/usage/immer-reducers)
+- [Dave Ceddia: The Complete Guide to Immutability in React and Redux](https://daveceddia.com/react-redux-immutability-guide/)
 - [Immutable Data using ES6 and Beyond](https://wecodetheweb.com/2016/02/12/immutable-javascript-using-es6-and-beyond/)
-- [Immutable Data from Scratch](https://ryanfunduk.com/articles/immutable-data-from-scratch/)
-- [Redux Docs: Using the Object Spread Operator](../UsingObjectSpreadOperator.md)
 
 #### Normalizing Data
 
@@ -90,9 +96,8 @@ Because of these rules, it's important that the following core concepts are full
 
 - [Database Normalization in Simple English](https://www.essentialsql.com/get-ready-to-learn-sql-database-normalization-explained-in-simple-english/)
 - [Idiomatic Redux: Normalizing the State Shape](https://egghead.io/lessons/javascript-redux-normalizing-the-state-shape)
-- [Normalizr Documentation](https://github.com/paularmstrong/normalizr)
-- [Redux Without Profanity: Normalizr](https://tonyhb.gitbooks.io/redux-without-profanity/content/normalizer.html)
+- [Redux Toolkit: `createEntityAdapter`](/toolkit/api/createEntityAdapter)
+- [Essentials: Performance and Normalizing Data](../../tutorials/essentials/part-6-performance-normalization.md)
+- [Normalizr Documentation](https://github.com/paularmstrong/normalizr) (stable, but no longer actively maintained)
 - [Querying a Redux Store](https://medium.com/@adamrackis/querying-a-redux-store-37db8c7f3b0f)
 - [Wikipedia: Associative Entity](https://en.wikipedia.org/wiki/Associative_entity)
-- [Database Design: Many-to-Many](https://web.csulb.edu/colleges/coe/cecs/dbdesign/dbdesign.php?page=manymany.php)
-- [Avoiding Accidental Complexity When Structuring Your App State](https://medium.com/@talkol/avoiding-accidental-complexity-when-structuring-your-app-state-6e6d22ad5e2a)

@@ -6,8 +6,10 @@ description: 'The official Fundamentals tutorial for Redux: learn the standard p
 ---
 
 import { DetailedExplanation } from '../../components/DetailedExplanation'
+import { LiveExample } from '@site/src/components/LiveExample'
 
-# Redux Fundamentals, Part 7: Standard Redux Patterns
+<!-- prettier-ignore -->
+import FundamentalsWarning from "../../components/_FundamentalsWarning.mdx";
 
 :::tip What You'll Learn
 
@@ -32,7 +34,9 @@ So far, we've covered the basics of how Redux actually works. However, real worl
 
 It's important to note that **none of these patterns are _required_ to use Redux!** But, there are very good reasons why each of these patterns exists, and you'll see some or all of them in almost every Redux codebase.
 
-In this section, we'll rework our existing todo app code to use some of these patterns, and talk about why they're commonly used in Redux apps. Then, in [**Part 8**](./part-8-modern-redux.md), we'll talk about "modern Redux", including **how to use our official [Redux Toolkit](https://redux-toolkit.js.org) package to simplify all the Redux logic we've written "by hand"** in our app, and why **we recommend using Redux Toolkit as the standard approach for writing Redux apps**.
+In this section, we'll rework our existing todo app code to use some of these patterns, and talk about why they're commonly used in Redux apps. Then, in [**Part 8**](./part-8-modern-redux.md), we'll talk about "modern Redux", including **how to use our official [Redux Toolkit](/toolkit) package to simplify all the Redux logic we've written "by hand"** in our app, and why **we recommend using Redux Toolkit as the standard approach for writing Redux apps**.
+
+<FundamentalsWarning />
 
 ## Action Creators
 
@@ -147,7 +151,7 @@ export const colorFilterChanged = (color, changeType) => {
 
 And since this action was being dispatched from the `<Footer>` component, we'll need to import the `colorFilterChanged` action creator over there and use it:
 
-```js title="src/features/footer/Footer.js"
+```js title="src/features/footer/Footer.jsx"
 import React from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 
@@ -201,9 +205,9 @@ export function fetchTodos() {
 }
 ```
 
-And that means we have to change the place it's dispatched in `index.js` to call the outer thunk action creator function, and pass the returned inner thunk function to `dispatch`:
+And that means we have to change the place it's dispatched in `main.jsx` to call the outer thunk action creator function, and pass the returned inner thunk function to `dispatch`:
 
-```js title="src/index.js"
+```js title="src/main.jsx"
 import store from './store'
 import { fetchTodos } from './features/todos/todosSlice'
 
@@ -280,7 +284,7 @@ First, we need to install Reselect:
 npm install reselect
 ```
 
-Then, we can import and call `createSelector`. Our original `selectTodoIds` function was defined over in `TodoList.js`, but it's more common for selector functions to be written in the relevant slice file. So, let's add this to the todos slice:
+Then, we can import and call `createSelector`. Our original `selectTodoIds` function was defined over in `TodoList.jsx`, but it's more common for selector functions to be written in the relevant slice file. So, let's add this to the todos slice:
 
 ```js title="src/features/todos/todosSlice.js"
 // highlight-next-line
@@ -303,7 +307,7 @@ export const selectTodoIds = createSelector(
 
 Then, let's use it in `<TodoList>`:
 
-```js title="src/features/todos/TodoList.js"
+```js title="src/features/todos/TodoList.jsx"
 import React from 'react'
 import { useSelector, shallowEqual } from 'react-redux'
 
@@ -589,25 +593,22 @@ export const fetchTodos = () => async dispatch => {
 }
 ```
 
-However, before we try to show this in the UI, we need to modify the fake server API to add an artificial delay to our API calls. Open up `src/api/server.js`, and look for this commented-out line around line 63:
+However, before we try to show this in the UI, we need to modify the fake server API to add an artificial delay to our API calls. Open up `src/api/server.js`, and change the `ARTIFICIAL_DELAY_MS` value near the top of the file from `0` to `2000`:
 
 ```js title="src/api/server.js"
-new Server({
-  routes() {
-    this.namespace = 'fakeApi'
-    // highlight-next-line
-    // this.timing = 2000
+// Add an extra delay to all endpoints, so loading spinners show up.
+// Set this to 2000 to simulate a slow network.
+// highlight-next-line
+const ARTIFICIAL_DELAY_MS = 2000
 
-    // omit other code
-  }
-})
+// omit other code
 ```
 
-If you uncomment that line, the fake server will add a 2-second delay to every API call our app makes, which gives us enough time to actually see a loading spinner being displayed.
+With that change, the fake server will add a 2-second delay to every API call our app makes, which gives us enough time to actually see a loading spinner being displayed.
 
 Now, we can read the loading state value in our `<TodoList>` component, and show a loading spinner instead based on that value.
 
-```js title="src/features/todos/TodoList.js"
+```js title="src/features/todos/TodoList.jsx"
 // omit imports
 
 const TodoList = () => {
@@ -636,17 +637,15 @@ In a real app, we'd also want to handle API failure errors and other potential c
 
 Here's what the app looks like with that loading status enabled (to see the spinner again, reload the app preview or open it in a new tab):
 
-<iframe
-  class="codesandbox"
-  src="https://codesandbox.io/embed/github/reduxjs/redux-fundamentals-example-app/tree/checkpoint-7-asyncLoading/?fontsize=14&hidenavigation=1&theme=dark&runonclick=1"
-  title="redux-fundamentals-example-app"
-  allow="geolocation; microphone; camera; midi; vr; accelerometer; gyroscope; payment; ambient-light-sensor; encrypted-media; usb"
-  sandbox="allow-modals allow-forms allow-popups allow-scripts allow-same-origin"
-></iframe>
+<LiveExample
+  repo="reduxjs/redux-fundamentals-example-app"
+  ref="checkpoint-7-asyncLoading"
+  title="Redux Fundamentals: async loading status"
+/>
 
 ## Flux Standard Actions
 
-The Redux store itself does not actually care what fields you put into your action object. It only cares that `action.type` exists and has a value, and normal Redux actions always use a string for `action.type`. That means that you _could_ put any other fields into the action that you want. Maybe we could have `action.todo` for a "todo added" action, or `action.color`, and so on.
+The Redux store itself does not actually care what fields you put into your action object. It only cares that `action.type` exists and is a string. That means that you _could_ put any other fields into the action that you want. Maybe we could have `action.todo` for a "todo added" action, or `action.color`, and so on.
 
 However, if every action uses different field names for its data fields, it can be hard to know ahead of time what fields you need to handle in each reducer.
 
@@ -893,7 +892,7 @@ This means that **we can write thunk functions that return a promise, and wait o
 
 We already have our `<Header>` component dispatching a thunk to save new todo entries to the server. Let's add some loading state inside the `<Header>` component, then disable the text input and show another loading spinner while we're waiting for the server:
 
-```js title="src/features/header/Header.js"
+```js title="src/features/header/Header.jsx"
 const Header = () => {
   const [text, setText] = useState('')
   // highlight-next-line
@@ -962,13 +961,11 @@ For more details on why these patterns exist and how Redux is meant to be used, 
 
 Here's how our app looks after it's been fully converted to use these patterns:
 
-<iframe
-  class="codesandbox"
-  src="https://codesandbox.io/embed/github/reduxjs/redux-fundamentals-example-app/tree/checkpoint-8-normalizedState/?fontsize=14&hidenavigation=1&theme=dark&runonclick=1"
-  title="redux-fundamentals-example-app"
-  allow="geolocation; microphone; camera; midi; vr; accelerometer; gyroscope; payment; ambient-light-sensor; encrypted-media; usb"
-  sandbox="allow-modals allow-forms allow-popups allow-scripts allow-same-origin"
-></iframe>
+<LiveExample
+  repo="reduxjs/redux-fundamentals-example-app"
+  ref="checkpoint-8-normalizedState"
+  title="Redux Fundamentals: standard patterns"
+/>
 
 :::tip Summary
 
@@ -990,7 +987,7 @@ Here's how our app looks after it's been fully converted to use these patterns:
 
 ## What's Next?
 
-Writing all this code "by hand" can be time-consuming and difficult. **That's why we recommend that you use our official [Redux Toolkit](https://redux-toolkit.js.org) package to write your Redux logic instead**.
+Writing all this code "by hand" can be time-consuming and difficult. **That's why we recommend that you use our official [Redux Toolkit](/toolkit) package to write your Redux logic instead**.
 
 Redux Toolkit includes APIs that **help you write all the typical Redux usage patterns, but with less code**. It also helps **prevent common mistakes** like accidentally mutating state.
 

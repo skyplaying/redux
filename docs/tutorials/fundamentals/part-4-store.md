@@ -6,8 +6,10 @@ description: 'The official Redux Fundamentals tutorial: learn how to create and 
 ---
 
 import { DetailedExplanation } from '../../components/DetailedExplanation'
+import { LiveExample } from '@site/src/components/LiveExample'
 
-# Redux Fundamentals, Part 4: Store
+<!-- prettier-ignore -->
+import FundamentalsWarning from "../../components/_FundamentalsWarning.mdx";
 
 :::tip What You'll Learn
 
@@ -27,15 +29,17 @@ to create a "root reducer" based on the different "slice reducers" for each feat
 
 Now, it's time to pull those pieces together, with the central piece of a Redux app: the **store**.
 
+<FundamentalsWarning />
+
 ## Redux Store
 
 The Redux **store** brings together the state, actions, and reducers that make up your app. The store has several responsibilities:
 
 - Holds the current application state inside
-- Allows access to the current state via [`store.getState()`](../../api/Store.md#getState);
-- Allows state to be updated via [`store.dispatch(action)`](../../api/Store.md#dispatch);
-- Registers listener callbacks via [`store.subscribe(listener)`](../../api/Store.md#subscribe);
-- Handles unregistering of listeners via the `unsubscribe` function returned by [`store.subscribe(listener)`](../../api/Store.md#subscribe).
+- Allows access to the current state via [`store.getState()`](../../api/Store.md#getstate);
+- Allows state to be updated via [`store.dispatch(action)`](../../api/Store.md#dispatchaction);
+- Registers listener callbacks via [`store.subscribe(listener)`](../../api/Store.md#subscribelistener);
+- Handles unregistering of listeners via the `unsubscribe` function returned by [`store.subscribe(listener)`](../../api/Store.md#subscribelistener).
 
 It's important to note that **you'll only have a single store in a Redux application**. When you want to split your data handling logic, you'll use [reducer composition](./part-3-state-actions-reducers.md#splitting-reducers) and create multiple reducers that
 can be combined together, instead of creating separate stores.
@@ -91,7 +95,7 @@ Before you run this code, try going back to `src/features/todos/todosSlice.js`, 
 
 :::
 
-```js title="src/index.js"
+```js title="src/main.jsx"
 // Omit existing React imports
 
 import store from './store'
@@ -206,7 +210,7 @@ function createStore(reducer, preloadedState) {
 }
 ```
 
-This small version of a Redux store works well enough that you could use it to replace the actual Redux `createStore` function you've been using in your app so far. (Try it and see for yourself!) [The actual Redux store implementation is longer and a bit more complicated](https://github.com/reduxjs/redux/blob/v4.0.5/src/createStore.js), but most of that is comments, warning messages, and handling some edge cases.
+This small version of a Redux store works well enough that you could use it to replace the actual Redux `createStore` function you've been using in your app so far. (Try it and see for yourself!) [The actual Redux store implementation is longer and a bit more complicated](https://github.com/reduxjs/redux/blob/v5.0.1/src/createStore.ts), but most of that is comments, warning messages, and handling some edge cases.
 
 As you can see, the actual logic here is fairly short:
 
@@ -269,7 +273,7 @@ We don't have a `preloadedState` value here, so we'll pass `undefined` as the se
 
 Next, let's try dispatching an action:
 
-```js title="src/index.js"
+```js title="src/main.jsx"
 import store from './store'
 
 // highlight-start
@@ -311,7 +315,7 @@ export default store
 
 Now we can see what happens if we use the store:
 
-```js title="src/index.js"
+```js title="src/main.jsx"
 import store from './store'
 
 store.dispatch({ type: 'todos/todoAdded', payload: 'Learn about actions' })
@@ -376,7 +380,7 @@ As their names say, each of these middleware will print a number when an action 
 
 What happens if we dispatch now?
 
-```js title="src/index.js"
+```js title="src/main.jsx"
 import store from './store'
 
 store.dispatch({ type: 'todos/todoAdded', payload: 'Learn about actions' })
@@ -444,7 +448,7 @@ You can give these middleware functions any names you want, but it can help to u
 
 :::
 
-Because these are normal functions, we can also write them using ES6 arrow functions. This lets us write them shorter because arrow functions don't have to have a `return` statement, but it can also be a bit harder to read if you're not yet familiar with arrow functions and implicit returns.
+Because these are normal functions, we can also write them using ES2015 arrow functions. This lets us write them shorter because arrow functions don't have to have a `return` statement, but it can also be a bit harder to read if you're not yet familiar with arrow functions and implicit returns.
 
 Here's the same example as above, using arrow functions:
 
@@ -490,8 +494,8 @@ Whenever an action is dispatched:
 Any middleware can return any value, and the return value from the first middleware in the pipeline is actually returned when you call `store.dispatch()`. For example:
 
 ```js
-const alwaysReturnHelloMiddleware = storeAPI => next => action {
-  const originalResult = next(action);
+const alwaysReturnHelloMiddleware = storeAPI => next => action => {
+  const originalResult = next(action)
   // Ignore the original result, return something else
   return 'Hello!'
 }
@@ -499,7 +503,7 @@ const alwaysReturnHelloMiddleware = storeAPI => next => action {
 const middlewareEnhancer = applyMiddleware(alwaysReturnHelloMiddleware)
 const store = createStore(rootReducer, middlewareEnhancer)
 
-const dispatchResult = store.dispatch({type: 'some/action'})
+const dispatchResult = store.dispatch({ type: 'some/action' })
 console.log(dispatchResult)
 // log: 'Hello!'
 ```
@@ -550,13 +554,13 @@ Once that's installed, open up the browser's DevTools window. You should now see
 
 Once the extension is installed, we need to configure the store so that the DevTools can see what's happening inside. The DevTools require a specific store enhancer to be added to make that possible.
 
-The [Redux DevTools Extension docs](https://github.com/reduxjs/redux-devtools/tree/main/extension) have some instructions on how to set up the store, but the steps listed are a bit complicated. However, there's an NPM package called `redux-devtools-extension` that takes care of the complicated part. That package exports a specialized `composeWithDevTools` function that we can use instead of the original Redux `compose` function.
+The [Redux DevTools Extension docs](https://github.com/reduxjs/redux-devtools/tree/main/extension) have some instructions on how to set up the store, but the steps listed are a bit complicated. However, there's an NPM package called `@redux-devtools/extension` that takes care of the complicated part. That package exports a specialized `composeWithDevTools` function that we can use instead of the original Redux `compose` function.
 
 Here's how that looks:
 
 ```js title="src/store.js"
 import { createStore, applyMiddleware } from 'redux'
-import { composeWithDevTools } from 'redux-devtools-extension'
+import { composeWithDevTools } from '@redux-devtools/extension'
 import rootReducer from './reducer'
 import { print1, print2, print3 } from './exampleAddons/middleware'
 
@@ -570,11 +574,11 @@ const store = createStore(rootReducer, composedEnhancer)
 export default store
 ```
 
-Make sure that `index.js` is still dispatching an action after importing the store. Now, open up the Redux DevTools tab in the browser's DevTools window. You should see something that looks like this:
+Make sure that `main.jsx` is still dispatching an action after importing the store. Now, open up the Redux DevTools tab in the browser's DevTools window. You should see something that looks like this:
 
 ![Redux DevTools Extension: action tab](/img/tutorials/fundamentals/devtools-action-tab.png)
 
-There's a list of dispatched actions on the left. If we click one of them, the right pane shows several tabs:
+There's a list of dispatched actions on the left. If we click one of them, the right panel shows several tabs:
 
 - The contents of that action object
 - The entire Redux state as it looked after the reducer ran
@@ -595,13 +599,12 @@ As you've seen, the store is the central piece of every Redux application. Store
 
 Let's see how our example app looks now:
 
-<iframe
-  class="codesandbox"
-  src="https://codesandbox.io/embed/github/reduxjs/redux-fundamentals-example-app/tree/checkpoint-2-storeSetup/?fontsize=14&hidenavigation=1&theme=dark&module=%2Fsrc%2Fstore.js&runonclick=1"
-  title="redux-fundamentals-example-app"
-  allow="geolocation; microphone; camera; midi; vr; accelerometer; gyroscope; payment; ambient-light-sensor; encrypted-media; usb"
-  sandbox="allow-modals allow-forms allow-popups allow-scripts allow-same-origin"
-></iframe>
+<LiveExample
+  repo="reduxjs/redux-fundamentals-example-app"
+  ref="checkpoint-2-storeSetup"
+  file="src/store.js"
+  title="Redux Fundamentals: store setup"
+/>
 
 And as a reminder, here's what we covered in this section:
 

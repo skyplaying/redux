@@ -2,7 +2,7 @@
   "compilerOptions": {
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
-    "moduleResolution": "node",
+    "moduleResolution": "Bundler",
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "allowUnusedLabels": true,
@@ -15,8 +15,8 @@
     "target": "ESNext",
     "allowJs": true,
     "checkJs": false,
-    "alwaysStrict": false,
-    "baseUrl": "..",
+    "noUncheckedSideEffectImports": false,
+    "types": ["@testing-library/jest-dom"],
     "paths": {}
   }
 }

@@ -40,35 +40,44 @@ For background on why we recommend integration-style tests, see:
 
 ### Test Runners
 
-**Redux can be tested with any test runner**, since it's just plain JavaScript. One common option is [Jest](https://jestjs.io/), a widely used test runner that comes with Create-React-App, and is used by the Redux library repos. If you're using [Vite](https://vitejs.dev/) to build your project, you may be using [Vitest](https://vitest.dev/) as your test runner.
+**Redux can be tested with any test runner**, since it's just plain JavaScript. An increasingly common choice is [Vitest](https://vitest.dev/) (used by the Redux library repos), though [Jest](https://jestjs.io/) is still used widely.
 
-Typically, your test runner needs to be configured to compile JavaScript/TypeScript syntax. If you're going to be testing UI components, you will likely need to configure the test runner to use [JSDOM](https://github.com/jsdom/jsdom) to provide a mock DOM environment.
+Typically, your test runner needs to be configured to compile JavaScript/TypeScript syntax. If you're going to be testing UI components **without a browser**, you will likely need to configure the test runner to use [JSDOM](https://github.com/jsdom/jsdom) to provide a mock DOM environment.
 
-The examples in this page will assume you're using Jest, but the same patterns apply no matter what test runner you're using.
+The examples in this page will assume you're using Vitest, but the same patterns apply no matter what test runner you're using.
 
 See these resources for typical test runner configuration instructions:
 
+- **Vitest**
+  - [Vitest: Getting Started](https://vitest.dev/guide/)
+  - [Vitest: Browser Mode](https://vitest.dev/guide/browser)
+  - [Vitest: Configuration - Test Environment](https://vitest.dev/config/#environment)
 - **Jest**:
   - [Jest: Getting Started](https://jestjs.io/docs/getting-started)
   - [Jest: Configuration - Test Environment](https://jestjs.io/docs/configuration#testenvironment-string)
-- **Vitest**
-  - [Vitest: Getting Started](https://vitest.dev/guide/)
-  - [Vitest: Configuration - Test Environment](https://vitest.dev/config/#environment)
 
 ### UI and Network Testing Tools
 
-**The Redux team recommends using [React Testing Library (RTL)](https://testing-library.com/docs/react-testing-library/intro) to test React components that connect to Redux**. React Testing Library is a simple and complete React DOM testing utility that encourages good testing practices. It uses ReactDOM's `render` function and `act` from react-dom/tests-utils. (The Testing Library family of tools also includes [adapters for many other popular frameworks as well](https://testing-library.com/docs/dom-testing-library/intro).)
+**The Redux team recommends using either [Vitest Browser Mode](https://vitest.dev/guide/browser/) or [React Testing Library (RTL)](https://testing-library.com/docs/react-testing-library/intro) to test React components that connect to Redux**.
 
-We also **recommend using [Mock Server Worker (MSW)](https://mswjs.io/) to mock network requests**, as this means your application logic does not need to be changed or mocked when writing tests.
+React Testing Library is a simple and complete React DOM testing utility that encourages good testing practices. It uses ReactDOM's `render` function and `act` from react-dom/tests-utils. (The Testing Library family of tools also includes [adapters for many other popular frameworks as well](https://testing-library.com/docs/dom-testing-library/intro).)
 
+Vitest Browser Mode runs integration tests in a real browser, removing the need for a "mock" DOM environment (and allowing for visual feedback and regression testing). When using React, you'll also need `vitest-browser-react`, which includes a `render` utility similar to RTL's.
+
+We also **recommend using [Mock Service Worker (MSW)](https://mswjs.io/) to mock network requests**, as this means your application logic does not need to be changed or mocked when writing tests.
+
+- **Vitest Browser Mode**
+  - [Vitest: Browser Mode Setup](https://vitest.dev/guide/browser)
 - **DOM/React Testing Library**
   - [DOM Testing Library: Setup](https://testing-library.com/docs/dom-testing-library/setup)
   - [React Testing Library: Setup](https://testing-library.com/docs/react-testing-library/setup)
   - [Testing Library Jest-DOM Matchers](https://testing-library.com/docs/ecosystem-jest-dom)
+  - [Testing Library User Events](https://testing-library.com/docs/user-event)
 - **Mock Service Worker**
   - [MSW: Installation](https://mswjs.io/docs/getting-started/install)
   - [MSW: Setting up mock requests](https://mswjs.io/docs/getting-started/mocks/rest-api)
   - [MSW: Mock server configuration for Node](https://mswjs.io/docs/getting-started/integrate/node)
+  - [MSW: Mock server configuration for Vitest Browser Mode](https://mswjs.io/docs/recipes/vitest-browser-mode/)
 
 ## Integration Testing Connected Components and Redux Logic
 
@@ -125,7 +134,7 @@ const userSlice = createSlice({
   }
 })
 
-export const selectUser = (state: RootState) => state.user.name
+export const selectUserName = (state: RootState) => state.user.name
 export const selectUserFetchStatus = (state: RootState) => state.user.status
 
 export default userSlice.reducer
@@ -144,26 +153,24 @@ const userSlice = createSlice({
 })
 export default userSlice.reducer
 // file: app/store.ts
-import {
-  combineReducers,
-  configureStore,
-  PreloadedState
-} from '@reduxjs/toolkit'
+import { combineReducers, configureStore } from '@reduxjs/toolkit'
 import userReducer from '../features/users/userSlice'
-// Create the root reducer independently to obtain the RootState type
+// Create the root reducer independently to obtain the RootState and PreloadedState type
 const rootReducer = combineReducers({
   user: userReducer
 })
-export function setupStore(preloadedState?: PreloadedState<RootState>) {
+export function setupStore(preloadedState?: PreloadedState) {
   return configureStore({
     reducer: rootReducer,
     preloadedState
   })
 }
+export type PreloadedState = Parameters<typeof rootReducer>[0]
 export type RootState = ReturnType<typeof rootReducer>
 export type AppStore = ReturnType<typeof setupStore>
 export type AppDispatch = AppStore['dispatch']
 ```
+
 ```ts title="app/hooks.ts"
 // file: features/users/userSlice.ts noEmit
 import { createSlice } from '@reduxjs/toolkit'
@@ -177,30 +184,28 @@ const userSlice = createSlice({
 })
 export default userSlice.reducer
 // file: app/store.ts noEmit
-import {
-  combineReducers,
-  configureStore,
-  PreloadedState
-} from '@reduxjs/toolkit'
+import { combineReducers, configureStore } from '@reduxjs/toolkit'
 import userReducer from '../features/users/userSlice'
 const rootReducer = combineReducers({
   user: userReducer
 })
-export function setupStore(preloadedState?: PreloadedState<RootState>) {
+export function setupStore(preloadedState?: PreloadedState) {
   return configureStore({
     reducer: rootReducer,
     preloadedState
   })
 }
+export type PreloadedState = Parameters<typeof rootReducer>[0]
 export type RootState = ReturnType<typeof rootReducer>
 export type AppStore = ReturnType<typeof setupStore>
 export type AppDispatch = AppStore['dispatch']
 // file: app/hooks.ts
-import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux'
-import type { RootState, AppDispatch } from './store'
+import { useDispatch, useSelector } from 'react-redux'
+import type { AppDispatch, RootState } from './store'
+
 // Use throughout your app instead of plain `useDispatch` and `useSelector`
-export const useAppDispatch: () => AppDispatch = useDispatch
-export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
+export const useAppDispatch = useDispatch.withTypes<AppDispatch>()
+export const useAppSelector = useSelector.withTypes<RootState>()
 ```
 
 ```tsx title="features/users/UserDisplay.tsx"
@@ -211,30 +216,27 @@ export const userAPI = {
   })
 }
 // file: app/store.ts noEmit
-import {
-  combineReducers,
-  configureStore,
-  PreloadedState
-} from '@reduxjs/toolkit'
+import { combineReducers, configureStore } from '@reduxjs/toolkit'
 import userReducer from '../features/users/userSlice'
 const rootReducer = combineReducers({
   user: userReducer
 })
-export function setupStore(preloadedState?: PreloadedState<RootState>) {
+export function setupStore(preloadedState?: PreloadedState) {
   return configureStore({
     reducer: rootReducer,
     preloadedState
   })
 }
+export type PreloadedState = Parameters<typeof rootReducer>[0]
 export type RootState = ReturnType<typeof rootReducer>
 export type AppStore = ReturnType<typeof setupStore>
 export type AppDispatch = AppStore['dispatch']
 // file: app/hooks.ts noEmit
-import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux'
-import type { RootState, AppDispatch } from './store'
+import { useDispatch, useSelector } from 'react-redux'
+import type { AppDispatch, RootState } from './store'
 // Use throughout your app instead of plain `useDispatch` and `useSelector`
-export const useAppDispatch = () => useDispatch<AppDispatch>()
-export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
+export const useAppDispatch = useDispatch.withTypes<AppDispatch>()
+export const useAppSelector = useSelector.withTypes<RootState>()
 // file: features/users/userSlice.ts noEmit
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import { userAPI } from './userAPI'
@@ -260,23 +262,23 @@ const userSlice = createSlice({
     })
   }
 })
-export const selectUser = (state: RootState) => state.user.name
+export const selectUserName = (state: RootState) => state.user.name
 export const selectUserFetchStatus = (state: RootState) => state.user.status
 export default userSlice.reducer
 // file: features/users/UserDisplay.tsx
 import React from 'react'
 import { useAppDispatch, useAppSelector } from '../../app/hooks'
-import { fetchUser, selectUser, selectUserFetchStatus } from './userSlice'
+import { fetchUser, selectUserName, selectUserFetchStatus } from './userSlice'
 
 export default function UserDisplay() {
   const dispatch = useAppDispatch()
-  const user = useAppSelector(selectUser)
+  const userName = useAppSelector(selectUserName)
   const userFetchStatus = useAppSelector(selectUserFetchStatus)
 
   return (
     <div>
       {/* Display the current user name */}
-      <div>{user}</div>
+      <div>{userName}</div>
       {/* On button click, dispatch a thunk action to fetch a user */}
       <button onClick={() => dispatch(fetchUser())}>Fetch user</button>
       {/* At any point if we're fetching a user, display that on the UI */}
@@ -298,7 +300,7 @@ To test the component, we `render` it into the DOM, and assert that the app resp
 
 ### Setting Up a Reusable Test Render Function
 
-React Testing Library's `render` function accepts a tree of React elements and renders those components. Just like in a real app, any Redux-connected components will need [a React-Redux `<Provider>` component wrapped around them](https://react-redux.js.org/tutorials/quick-start#provide-the-redux-store-to-react), with a real Redux store set up and provided.
+React Testing Library's `render` function accepts a tree of React elements and renders those components. Just like in a real app, any Redux-connected components will need [a React-Redux `<Provider>` component wrapped around them](../tutorials/quick-start.md#provide-the-redux-store-to-react), with a real Redux store set up and provided.
 
 Additionally, **the test code should create a separate Redux store instance for every test, rather than reusing the same store instance and resetting its state**. That ensures no values accidentally leak between tests.
 
@@ -311,6 +313,8 @@ The custom render function should let us:
 - Pass through additional options to RTL's original `render` function
 - Automatically wrap the component being tested with a `<Provider store={store}>`
 - Return the store instance in case the test needs to dispatch more actions or check state
+
+For convenience, let's also set up a [user instance](https://testing-library.com/docs/user-event/setup).
 
 A typical custom render function setup could look like this:
 
@@ -327,162 +331,59 @@ const userSlice = createSlice({
 })
 export default userSlice.reducer
 // file: app/store.ts noEmit
-import {
-  combineReducers,
-  configureStore,
-  PreloadedState
-} from '@reduxjs/toolkit'
+import { combineReducers, configureStore } from '@reduxjs/toolkit'
 import userReducer from '../features/users/userSlice'
 const rootReducer = combineReducers({
   user: userReducer
 })
-export function setupStore(preloadedState?: PreloadedState<RootState>) {
+export function setupStore(preloadedState?: PreloadedState) {
   return configureStore({
     reducer: rootReducer,
     preloadedState
   })
 }
+export type PreloadedState = Parameters<typeof rootReducer>[0]
 export type RootState = ReturnType<typeof rootReducer>
 export type AppStore = ReturnType<typeof setupStore>
 // file: utils/test-utils.tsx
 import React, { PropsWithChildren } from 'react'
 import { render } from '@testing-library/react'
 import type { RenderOptions } from '@testing-library/react'
-import { configureStore } from '@reduxjs/toolkit'
-import type { PreloadedState } from '@reduxjs/toolkit'
+import { userEvent } from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 
-import type { AppStore, RootState } from '../app/store'
-// As a basic setup, import your same slice reducers
-import userReducer from '../features/users/userSlice'
-
-// This type interface extends the default options for render from RTL, as well
-// as allows the user to specify other things such as initialState, store.
-interface ExtendedRenderOptions extends Omit<RenderOptions, 'queries'> {
-  preloadedState?: PreloadedState<RootState>
-  store?: AppStore
-}
-
-export function renderWithProviders(
-  ui: React.ReactElement,
-  {
-    preloadedState= {},
-    // Automatically create a store instance if no store was passed in
-    store = configureStore({ reducer: { user: userReducer }, preloadedState }),
-    ...renderOptions
-  }: ExtendedRenderOptions = {}
-) {
-  function Wrapper({ children }: PropsWithChildren<{}>): JSX.Element {
-    return <Provider store={store}>{children}</Provider>
-  }
-
-  // Return an object with the store and all of RTL's query functions
-  return { store, ...render(ui, { wrapper: Wrapper, ...renderOptions }) }
-}
-```
-
-In this example, we're directly importing the same slice reducers that the real app uses to create the store. It may be helpful to create a reusable `setupStore` function that does the actual store creation with the right options and configuration, and use that in the custom render function instead.
-
-```ts title="app/store.ts"
-// file: features/users/userSlice.ts noEmit
-import { createSlice } from '@reduxjs/toolkit'
-const userSlice = createSlice({
-  name: 'user',
-  initialState: {
-    name: 'No user',
-    status: 'idle'
-  },
-  reducers: {}
-})
-export default userSlice.reducer
-// file: app/store.ts
-import { combineReducers, configureStore } from '@reduxjs/toolkit'
-import type { PreloadedState } from '@reduxjs/toolkit'
-
-import userReducer from '../features/users/userSlice'
-
-// Create the root reducer separately so we can extract the RootState type
-const rootReducer = combineReducers({
-  user: userReducer
-})
-
-export const setupStore = (preloadedState?: PreloadedState<RootState>) => {
-  return configureStore({
-    reducer: rootReducer,
-    preloadedState
-  })
-}
-
-export type RootState = ReturnType<typeof rootReducer>
-export type AppStore = ReturnType<typeof setupStore>
-export type AppDispatch = AppStore['dispatch']
-```
-
-Then, use `setupStore` in the test utils file instead of calling `configureStore` again:
-
-```tsx
-// file: features/users/userSlice.ts noEmit
-import { createSlice } from '@reduxjs/toolkit'
-const userSlice = createSlice({
-  name: 'user',
-  initialState: {
-    name: 'No user',
-    status: 'idle'
-  },
-  reducers: {}
-})
-export default userSlice.reducer
-// file: app/store.ts noEmit
-import { combineReducers, configureStore } from '@reduxjs/toolkit'
-import type { PreloadedState } from '@reduxjs/toolkit'
-
-import userReducer from '../features/users/userSlice'
-
-const rootReducer = combineReducers({
-  user: userReducer
-})
-
-export const setupStore = (preloadedState?: PreloadedState<RootState>) => {
-  return configureStore({
-    reducer: rootReducer,
-    preloadedState
-  })
-}
-
-export type RootState = ReturnType<typeof rootReducer>
-export type AppStore = ReturnType<typeof setupStore>
-export type AppDispatch = AppStore['dispatch']
-// file: utils/test-utils.tsx
-import React, { PropsWithChildren } from 'react'
-import { render } from '@testing-library/react'
-import type { RenderOptions } from '@testing-library/react'
-import { configureStore } from '@reduxjs/toolkit'
-import type { PreloadedState } from '@reduxjs/toolkit'
-import { Provider } from 'react-redux'
-
+import type { AppStore, RootState, PreloadedState } from '../app/store'
 import { setupStore } from '../app/store'
-import type { AppStore, RootState } from '../app/store'
 
 // This type interface extends the default options for render from RTL, as well
-// as allows the user to specify other things such as initialState, store.
-interface ExtendedRenderOptions extends Omit<RenderOptions, 'queries'> {
-  preloadedState?: PreloadedState<RootState>
+// as allows the user to specify other things such as preloadedState, store.
+interface ExtendedRenderOptions
+  extends Omit<RenderOptions, 'queries' | 'wrapper'> {
+  preloadedState?: PreloadedState
   store?: AppStore
 }
 
 export function renderWithProviders(
   ui: React.ReactElement,
-  {
+  extendedRenderOptions: ExtendedRenderOptions = {}
+) {
+  const {
     preloadedState = {},
     // Automatically create a store instance if no store was passed in
     store = setupStore(preloadedState),
     ...renderOptions
-  }: ExtendedRenderOptions = {}
-) {
-  function Wrapper({ children }: PropsWithChildren<{}>): JSX.Element {
-    return <Provider store={store}>{children}</Provider>
+  } = extendedRenderOptions
+
+  const Wrapper = ({ children }: PropsWithChildren) => (
+    <Provider store={store}>{children}</Provider>
+  )
+
+  // Return an object with the store, user, and all of RTL's query functions
+  return {
+    store,
+    user: userEvent.setup(),
+    ...render(ui, { wrapper: Wrapper, ...renderOptions })
   }
-  return { store, ...render(ui, { wrapper: Wrapper, ...renderOptions }) }
 }
 ```
 
@@ -491,6 +392,9 @@ export function renderWithProviders(
 The actual test files should use the custom `render` function to actually render our Redux-connected components. If the code that we're testing involves making network requests, we should also configure MSW to mock the expected requests with appropriate test data.
 
 ```tsx title="features/users/tests/UserDisplay.test.tsx"
+// file: setup.ts noEmit
+import '@testing-library/jest-dom'
+
 // file: features/users/userSlice.ts noEmit
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
 import type { RootState } from '../../app/store'
@@ -503,12 +407,11 @@ const userSlice = createSlice({
   },
   reducers: {}
 })
-export const selectUser = (state: RootState) => state.user.name
+export const selectUserName = (state: RootState) => state.user.name
 export const selectUserFetchStatus = (state: RootState) => state.user.status
 export default userSlice.reducer
 // file: app/store.ts noEmit
 import { combineReducers, configureStore } from '@reduxjs/toolkit'
-import type { PreloadedState } from '@reduxjs/toolkit'
 
 import userReducer from '../features/users/userSlice'
 
@@ -516,29 +419,31 @@ const rootReducer = combineReducers({
   user: userReducer
 })
 
-export const setupStore = (preloadedState?: PreloadedState<RootState>) => {
+export const setupStore = (preloadedState?: PreloadedState) => {
   return configureStore({
     reducer: rootReducer,
     preloadedState
   })
 }
 
+export type PreloadedState = Parameters<typeof rootReducer>[0]
 export type RootState = ReturnType<typeof rootReducer>
 export type AppStore = ReturnType<typeof setupStore>
 export type AppDispatch = AppStore['dispatch']
 // file: utils/test-utils.tsx noEmit
-import React, { PropsWithChildren } from 'react'
+import React from 'react'
+import type { PropsWithChildren, JSX } from 'react'
 import { render } from '@testing-library/react'
 import type { RenderOptions } from '@testing-library/react'
-import { configureStore } from '@reduxjs/toolkit'
-import type { PreloadedState } from '@reduxjs/toolkit'
+import { userEvent } from '@testing-library/user-event'
 import { Provider } from 'react-redux'
 
 import { setupStore } from '../app/store'
-import type { AppStore, RootState } from '../app/store'
+import type { AppStore, RootState, PreloadedState } from '../app/store'
 
-interface ExtendedRenderOptions extends Omit<RenderOptions, 'queries'> {
-  preloadedState?: PreloadedState<RootState>
+interface ExtendedRenderOptions
+  extends Omit<RenderOptions, 'queries' | 'wrapper'> {
+  preloadedState?: PreloadedState
   store?: AppStore
 }
 
@@ -553,27 +458,32 @@ export function renderWithProviders(
   function Wrapper({ children }: PropsWithChildren<{}>): JSX.Element {
     return <Provider store={store}>{children}</Provider>
   }
-  return { store, ...render(ui, { wrapper: Wrapper, ...renderOptions }) }
+  return {
+    store,
+    user: userEvent.setup(),
+    ...render(ui, { wrapper: Wrapper, ...renderOptions })
+  }
 }
 // file: app/hooks.tsx noEmit
-import { TypedUseSelectorHook, useDispatch, useSelector } from 'react-redux'
-import type { RootState, AppDispatch } from './store'
-export const useAppDispatch: () => AppDispatch = useDispatch
-export const useAppSelector: TypedUseSelectorHook<RootState> = useSelector
+import { useDispatch, useSelector } from 'react-redux'
+import type { AppDispatch, RootState } from './store'
+// Use throughout your app instead of plain `useDispatch` and `useSelector`
+export const useAppDispatch = useDispatch.withTypes<AppDispatch>()
+export const useAppSelector = useSelector.withTypes<RootState>()
 // file: features/users/UserDisplay.tsx noEmit
 import React from 'react'
 import { useAppDispatch, useAppSelector } from '../../app/hooks'
-import { fetchUser, selectUser, selectUserFetchStatus } from './userSlice'
+import { fetchUser, selectUserName, selectUserFetchStatus } from './userSlice'
 
 export default function UserDisplay() {
   const dispatch = useAppDispatch()
-  const user = useAppSelector(selectUser)
+  const userName = useAppSelector(selectUserName)
   const userFetchStatus = useAppSelector(selectUserFetchStatus)
 
   return (
     <div>
       {/* Display the current user name */}
-      <div>{user}</div>
+      <div>{userName}</div>
       {/* On button click, dispatch a thunk action to fetch a user */}
       <button onClick={() => dispatch(fetchUser())}>Fetch user</button>
       {/* At any point if we're fetching a user, display that on the UI */}
@@ -583,9 +493,10 @@ export default function UserDisplay() {
 }
 // file: features/users/tests/UserDisplay.test.tsx
 import React from 'react'
-import { rest } from 'msw'
+import { beforeAll, afterEach, afterAll, test, expect } from 'vitest'
+import { http, HttpResponse, delay } from 'msw'
 import { setupServer } from 'msw/node'
-import { fireEvent, screen } from '@testing-library/react'
+import { screen } from '@testing-library/react'
 // We're using our own custom render function and not RTL's render.
 import { renderWithProviders } from '../../../utils/test-utils'
 import UserDisplay from '../UserDisplay'
@@ -594,8 +505,9 @@ import UserDisplay from '../UserDisplay'
 // and return the response 'John Smith' after 150ms
 // when receiving a get request to the `/api/user` endpoint
 export const handlers = [
-  rest.get('/api/user', (req, res, ctx) => {
-    return res(ctx.json('John Smith'), ctx.delay(150))
+  http.get('/api/user', async () => {
+    await delay(150)
+    return HttpResponse.json('John Smith')
   })
 ]
 
@@ -611,15 +523,16 @@ afterEach(() => server.resetHandlers())
 afterAll(() => server.close())
 
 test('fetches & receives a user after clicking the fetch user button', async () => {
-  renderWithProviders(<UserDisplay />)
+  const { user } = renderWithProviders(<UserDisplay />)
 
   // should show no user initially, and not be fetching a user
   expect(screen.getByText(/no user/i)).toBeInTheDocument()
   expect(screen.queryByText(/Fetching user\.\.\./i)).not.toBeInTheDocument()
 
   // after clicking the 'Fetch user' button, it should now show that it is fetching the user
-  fireEvent.click(screen.getByRole('button', { name: /Fetch user/i }))
-  expect(screen.getByText(/no user/i)).toBeInTheDocument()
+  await user.click(screen.getByRole('button', { name: /Fetch user/i }))
+  expect(screen.queryByText(/no user/i)).not.toBeInTheDocument()
+  expect(screen.getByText(/Fetching user\.\.\./i)).toBeInTheDocument()
 
   // after some time, the user should be received
   expect(await screen.findByText(/John Smith/i)).toBeInTheDocument()
@@ -628,7 +541,7 @@ test('fetches & receives a user after clicking the fetch user button', async () 
 })
 ```
 
-In this test, **we have completely avoided testing any Redux code directly, treating it as an implementation detail**. As a result, we are free to re-factor the _implementation_, while our tests will continue to pass and avoid false negatives (tests that fail despite the app still behaving how we want it to). We might change our state structure, convert our slice to use [RTK-Query](https://redux-toolkit.js.org/rtk-query/overview), or remove Redux entirely, and our tests will still pass. We have a strong degree of confidence that if we change some code and our tests report a failure, then our app really _is_ broken.
+In this test, **we have completely avoided testing any Redux code directly, treating it as an implementation detail**. As a result, we are free to re-factor the _implementation_, while our tests will continue to pass and avoid false negatives (tests that fail despite the app still behaving how we want it to). We might change our state structure, convert our slice to use [RTK-Query](/toolkit/rtk-query/overview), or remove Redux entirely, and our tests will still pass. We have a strong degree of confidence that if we change some code and our tests report a failure, then our app really _is_ broken.
 
 ### Preparing Initial Test State
 
@@ -661,6 +574,299 @@ test('Sets up initial state state with actions', () => {
 
 You can also extract `store` from the object returned by the custom render function, and dispatch more actions later as part of the test.
 
+### Vitest Browser Mode
+
+#### Setting Up a Reusable Test Render Function
+
+Similar to RTL, Vitest Browser Mode provides a `render` function that can be used to render a component in a real browser. However, since we're testing a React-Redux app, we need to ensure that the `<Provider>` is included in the rendered tree.
+
+We can create a custom render function that wraps the component in a `<Provider>` and sets up a Redux store, similar to the RTL custom render function shown above.
+
+```tsx title="utils/test-utils.tsx"
+// file: features/users/userSlice.ts noEmit
+import { createSlice } from '@reduxjs/toolkit'
+const userSlice = createSlice({
+  name: 'user',
+  initialState: {
+    name: 'No user',
+    status: 'idle'
+  },
+  reducers: {}
+})
+export default userSlice.reducer
+// file: app/store.ts noEmit
+import { combineReducers, configureStore } from '@reduxjs/toolkit'
+import userReducer from '../features/users/userSlice'
+const rootReducer = combineReducers({
+  user: userReducer
+})
+export function setupStore(preloadedState?: PreloadedState) {
+  return configureStore({
+    reducer: rootReducer,
+    preloadedState
+  })
+}
+export type PreloadedState = Parameters<typeof rootReducer>[0]
+export type RootState = ReturnType<typeof rootReducer>
+export type AppStore = ReturnType<typeof setupStore>
+// file: utils/test-utils.tsx
+import React, { PropsWithChildren } from 'react'
+import { render } from 'vitest-browser-react'
+import type { RenderOptions } from 'vitest-browser-react'
+import { Provider } from 'react-redux'
+
+import type { AppStore, RootState, PreloadedState } from '../app/store'
+import { setupStore } from '../app/store'
+
+// This type interface extends the default options for render from vitest-browser-react, as well
+// as allows the user to specify other things such as preloadedState, store.
+interface ExtendedRenderOptions extends Omit<RenderOptions, 'wrapper'> {
+  preloadedState?: PreloadedState
+  store?: AppStore
+}
+
+export async function renderWithProviders(
+  ui: React.ReactElement,
+  extendedRenderOptions: ExtendedRenderOptions = {}
+) {
+  const {
+    preloadedState = {},
+    // Automatically create a store instance if no store was passed in
+    store = setupStore(preloadedState),
+    ...renderOptions
+  } = extendedRenderOptions
+
+  const Wrapper = ({ children }: PropsWithChildren) => (
+    <Provider store={store}>{children}</Provider>
+  )
+
+  const screen = await render(ui, { wrapper: Wrapper, ...renderOptions })
+  // Return an object with the store, and the result of rendering
+  return {
+    store,
+    ...screen
+  }
+}
+```
+
+For convenience, we can also attach this to `page` in our setup file:
+
+```ts title="setup.ts"
+// file: vitest.config.ts noEmit
+import {} from "@vitest/browser-playwright"
+// file: features/users/userSlice.ts noEmit
+import { createSlice } from '@reduxjs/toolkit'
+const userSlice = createSlice({
+  name: 'user',
+  initialState: {
+    name: 'No user',
+    status: 'idle'
+  },
+  reducers: {}
+})
+export default userSlice.reducer
+// file: app/store.ts noEmit
+import { combineReducers, configureStore } from '@reduxjs/toolkit'
+import userReducer from '../features/users/userSlice'
+const rootReducer = combineReducers({
+  user: userReducer
+})
+export function setupStore(preloadedState?: PreloadedState) {
+  return configureStore({
+    reducer: rootReducer,
+    preloadedState
+  })
+}
+export type PreloadedState = Parameters<typeof rootReducer>[0]
+export type RootState = ReturnType<typeof rootReducer>
+export type AppStore = ReturnType<typeof setupStore>
+// file: utils/test-utils.tsx noEmit
+import React, { PropsWithChildren } from 'react'
+import { render } from 'vitest-browser-react'
+import type { RenderOptions } from 'vitest-browser-react'
+import { Provider } from 'react-redux'
+
+import type { AppStore, RootState, PreloadedState } from '../app/store'
+import { setupStore } from '../app/store'
+
+interface ExtendedRenderOptions extends Omit<RenderOptions, 'wrapper'> {
+  preloadedState?: PreloadedState
+  store?: AppStore
+}
+
+export async function renderWithProviders(
+  ui: React.ReactElement,
+  extendedRenderOptions: ExtendedRenderOptions = {}
+) {
+  const {
+    preloadedState = {},
+    store = setupStore(preloadedState),
+    ...renderOptions
+  } = extendedRenderOptions
+
+  const Wrapper = ({ children }: PropsWithChildren) => (
+    <Provider store={store}>{children}</Provider>
+  )
+
+  return {
+    store,
+    ...(await render(ui, { wrapper: Wrapper, ...renderOptions }))
+  }
+}
+// file: setup.ts
+import { renderWithProviders } from './utils/test-utils'
+import { page } from 'vitest/browser'
+
+page.extend({ renderWithProviders })
+
+declare module 'vitest/browser' {
+  interface BrowserPage {
+    renderWithProviders: typeof renderWithProviders
+  }
+}
+```
+
+Then we can use it in our tests, similarly to RTL:
+
+```tsx title="features/users/tests/UserDisplay.test.tsx"
+// file: vitest.config.ts noEmit
+import {} from '@vitest/browser-playwright'
+// file: setup.ts noEmit
+import { renderWithProviders } from './utils/test-utils'
+import { page } from 'vitest/browser'
+
+page.extend({ renderWithProviders })
+
+declare module 'vitest/browser' {
+  interface BrowserPage {
+    renderWithProviders: typeof renderWithProviders
+  }
+}
+
+// file: features/users/userSlice.ts noEmit
+import { createSlice, createAsyncThunk } from '@reduxjs/toolkit'
+import type { RootState } from '../../app/store'
+export const fetchUser = createAsyncThunk('user/fetchUser', async () => {})
+const userSlice = createSlice({
+  name: 'user',
+  initialState: {
+    name: 'No user',
+    status: 'idle'
+  },
+  reducers: {}
+})
+export const selectUserName = (state: RootState) => state.user.name
+export const selectUserFetchStatus = (state: RootState) => state.user.status
+export default userSlice.reducer
+// file: app/store.ts noEmit
+import { combineReducers, configureStore } from '@reduxjs/toolkit'
+
+import userReducer from '../features/users/userSlice'
+
+const rootReducer = combineReducers({
+  user: userReducer
+})
+
+export const setupStore = (preloadedState?: PreloadedState) => {
+  return configureStore({
+    reducer: rootReducer,
+    preloadedState
+  })
+}
+
+export type PreloadedState = Parameters<typeof rootReducer>[0]
+export type RootState = ReturnType<typeof rootReducer>
+export type AppStore = ReturnType<typeof setupStore>
+export type AppDispatch = AppStore['dispatch']
+// file: utils/test-utils.tsx noEmit
+import React, { PropsWithChildren } from 'react'
+import { render } from 'vitest-browser-react'
+import type { RenderOptions } from 'vitest-browser-react'
+import { Provider } from 'react-redux'
+
+import type { AppStore, RootState, PreloadedState } from '../app/store'
+import { setupStore } from '../app/store'
+
+interface ExtendedRenderOptions extends Omit<RenderOptions, 'wrapper'> {
+  preloadedState?: PreloadedState
+  store?: AppStore
+}
+
+export async function renderWithProviders(
+  ui: React.ReactElement,
+  extendedRenderOptions: ExtendedRenderOptions = {}
+) {
+  const {
+    preloadedState = {},
+    store = setupStore(preloadedState),
+    ...renderOptions
+  } = extendedRenderOptions
+
+  const Wrapper = ({ children }: PropsWithChildren) => (
+    <Provider store={store}>{children}</Provider>
+  )
+
+  return {
+    store,
+    ...(await render(ui, { wrapper: Wrapper, ...renderOptions }))
+  }
+}
+// file: app/hooks.tsx noEmit
+import { useDispatch, useSelector } from 'react-redux'
+import type { AppDispatch, RootState } from './store'
+// Use throughout your app instead of plain `useDispatch` and `useSelector`
+export const useAppDispatch = useDispatch.withTypes<AppDispatch>()
+export const useAppSelector = useSelector.withTypes<RootState>()
+// file: features/users/UserDisplay.tsx noEmit
+import React from 'react'
+import { useAppDispatch, useAppSelector } from '../../app/hooks'
+import { fetchUser, selectUserName, selectUserFetchStatus } from './userSlice'
+
+export default function UserDisplay() {
+  const dispatch = useAppDispatch()
+  const userName = useAppSelector(selectUserName)
+  const userFetchStatus = useAppSelector(selectUserFetchStatus)
+
+  return (
+    <div>
+      {/* Display the current user name */}
+      <div>{userName}</div>
+      {/* On button click, dispatch a thunk action to fetch a user */}
+      <button onClick={() => dispatch(fetchUser())}>Fetch user</button>
+      {/* At any point if we're fetching a user, display that on the UI */}
+      {userFetchStatus === 'loading' && <div>Fetching user...</div>}
+    </div>
+  )
+}
+// file: features/users/tests/UserDisplay.test.tsx
+import React from 'react'
+import { test, expect } from 'vitest'
+import { page } from 'vitest/browser'
+import UserDisplay from '../UserDisplay'
+
+test('fetches & receives a user after clicking the fetch user button', async () => {
+  const { store, ...screen } = await page.renderWithProviders(<UserDisplay />)
+
+  const noUserText = screen.getByText(/no user/i)
+  const fetchingUserText = screen.getByText(/Fetching user\.\.\./i)
+  const userNameText = screen.getByText(/John Smith/i)
+
+  // should show no user initially, and not be fetching a user
+  await expect.element(noUserText).toBeInTheDocument()
+  await expect.element(fetchingUserText).not.toBeInTheDocument()
+
+  // after clicking the 'Fetch user' button, it should now show that it is fetching the user
+  await screen.getByRole('button', { name: /fetch user/i }).click()
+  await expect.element(noUserText).not.toBeInTheDocument()
+  await expect.element(fetchingUserText).toBeInTheDocument()
+
+  // after some time, the user should be received
+  await expect.element(userNameText).toBeInTheDocument()
+  await expect.element(noUserText).not.toBeInTheDocument()
+  await expect.element(fetchingUserText).not.toBeInTheDocument()
+})
+```
+
 ## Unit Testing Individual Functions
 
 While we recommend using integration tests by default, since they exercise all the Redux logic working together, you may sometimes want to write unit tests for individual functions as well.
@@ -669,7 +875,7 @@ While we recommend using integration tests by default, since they exercise all t
 
 Reducers are pure functions that return the new state after applying the action to the previous state. In the majority of cases, the reducer is an implementation detail that does not need explicit tests. However, if your reducer contains particularly complex logic that you would like the confidence of having unit tests for, reducers can be easily tested.
 
-Because reducers are pure functions, so testing them should be straightforward. Call the reducer with a specific input `state` and `action`, and assert that the result state matches expectations.
+Because reducers are pure functions, testing them should be straightforward. Call the reducer with a specific input `state` and `action`, and assert that the result state matches expectations.
 
 #### Example
 
@@ -737,11 +943,11 @@ export const { todoAdded } = todosSlice.actions
 export default todosSlice.reducer
 
 // file: todosSlice.test.ts
-
+import { test, expect } from 'vitest'
 import reducer, { todoAdded, Todo } from './todosSlice'
 
 test('should return the initial state', () => {
-  expect(reducer(undefined, { type: undefined })).toEqual([
+  expect(reducer(undefined, { type: 'unknown' })).toEqual([
     { text: 'Use Redux', completed: false, id: 0 }
   ])
 })
@@ -755,7 +961,9 @@ test('should handle a todo being added to an empty list', () => {
 })
 
 test('should handle a todo being added to an existing list', () => {
-  const previousState: Todo[] = [{ text: 'Run the tests', completed: true, id: 0 }]
+  const previousState: Todo[] = [
+    { text: 'Run the tests', completed: true, id: 0 }
+  ]
 
   expect(reducer(previousState, todoAdded('Use Redux'))).toEqual([
     { text: 'Run the tests', completed: true, id: 0 },
@@ -772,19 +980,19 @@ However, since [most selectors are memoized to remember their last inputs](./der
 
 ### Action Creators & Thunks
 
-In Redux, action creators are functions which return plain objects. Our recommendation is not to write action creators manually, but instead have them generated automatically by [`createSlice`](https://redux-toolkit.js.org/api/createSlice#return-value), or created via [`createAction`](https://redux-toolkit.js.org/api/createAction) from [`@reduxjs/toolkit`](https://redux-toolkit.js.org/introduction/getting-started). As such, **you should not feel the need to test action creators by themselves** (the Redux Toolkit maintainers have already done that for you!).
+In Redux, action creators are functions which return plain objects. Our recommendation is not to write action creators manually, but instead have them generated automatically by [`createSlice`](/toolkit/api/createSlice#return-value), or created via [`createAction`](/toolkit/api/createAction) from [`@reduxjs/toolkit`](/toolkit/introduction/getting-started). As such, **you should not feel the need to test action creators by themselves** (the Redux Toolkit maintainers have already done that for you!).
 
 The return value of action creators is considered an implementation detail within your application, and when following an integration testing style, do not need explicit tests.
 
-Similarly for thunks using [Redux Thunk](https://github.com/reduxjs/redux-thunk), our recommendation is not to write them manually, but instead use [`createAsyncThunk`](https://redux-toolkit.js.org/api/createAsyncThunk) from [`@reduxjs/toolkit`](https://redux-toolkit.js.org/introduction/getting-started). The thunk handles dispatching the appropriate `pending`, `fulfilled` and `rejected` action types for you based on the lifecycle of the thunk.
+Similarly for thunks using [Redux Thunk](https://github.com/reduxjs/redux-thunk), our recommendation is not to write them manually, but instead use [`createAsyncThunk`](/toolkit/api/createAsyncThunk) from [`@reduxjs/toolkit`](/toolkit/introduction/getting-started). The thunk handles dispatching the appropriate `pending`, `fulfilled` and `rejected` action types for you based on the lifecycle of the thunk.
 
 We consider thunk behavior to be an implementation detail of the application, and recommend that it be covered by testing the group of components (or whole app) using it, rather than testing the thunk in isolation.
 
-Our recommendation is to mock async requests at the `fetch/xhr` level using tools like [`msw`](https://mswjs.io/), [`miragejs`](https://miragejs.com/), [`jest-fetch-mock`](https://github.com/jefflau/jest-fetch-mock#readme), [`fetch-mock`](https://www.wheresrhys.co.uk/fetch-mock/), or similar. By mocking requests at this level, none of the thunk logic has to change in a test - the thunk still tries to make a "real" async request, it just gets intercepted. See the ["Integration Test" example](#writing-integration-tests-with-components) for an example of testing a component which internally includes the behavior of a thunk.
+Our recommendation is to mock async requests at the `fetch/xhr` level using [Mock Service Worker (`msw`)](https://mswjs.io/) or a similar tool. By mocking requests at this level, none of the thunk logic has to change in a test - the thunk still tries to make a "real" async request, it just gets intercepted. See the ["Integration Test" example](#writing-integration-tests-with-components) for an example of testing a component which internally includes the behavior of a thunk.
 
 :::info
 
-If you prefer, or are otherwise required to write unit tests for your action creators or thunks, refer to the tests that Redux Toolkit uses for [`createAction`](https://github.com/reduxjs/redux-toolkit/blob/635d6d5e513e13dd59cd717f600d501b30ca2381/src/tests/createAction.test.ts) and [`createAsyncThunk`](https://github.com/reduxjs/redux-toolkit/blob/635d6d5e513e13dd59cd717f600d501b30ca2381/src/tests/createAsyncThunk.test.ts).
+If you prefer, or are otherwise required to write unit tests for your action creators or thunks, refer to the tests that Redux Toolkit uses for [`createAction`](https://github.com/reduxjs/redux-toolkit/blob/master/packages/toolkit/src/tests/createAction.test.ts) and [`createAsyncThunk`](https://github.com/reduxjs/redux-toolkit/blob/master/packages/toolkit/src/tests/createAsyncThunk.test.ts).
 
 :::
 
@@ -796,8 +1004,10 @@ Middleware functions wrap behavior of `dispatch` calls in Redux, so to test this
 
 First, we'll need a middleware function. This is similar to the real [redux-thunk](https://github.com/reduxjs/redux-thunk/blob/master/src/index.ts).
 
-```js
-const thunkMiddleware =
+```ts title="thunkMiddleware.ts"
+import type { Middleware } from '@reduxjs/toolkit'
+
+export const thunkMiddleware: Middleware =
   ({ dispatch, getState }) =>
   next =>
   action => {
@@ -809,19 +1019,36 @@ const thunkMiddleware =
   }
 ```
 
-We need to create fake `getState`, `dispatch`, and `next` functions. We use `jest.fn()` to create stubs, but with other test frameworks you would likely use [Sinon](https://sinonjs.org/).
+We need to create fake `getState`, `dispatch`, and `next` functions. We use `vi.fn()` to create stubs; with Jest, the equivalent is `jest.fn()`.
 
-The invoke function runs our middleware in the same way Redux does.
+The `invoke` function runs our middleware in the same way Redux does.
 
-```js
+```ts title="thunkMiddleware.test.ts"
+// file: thunkMiddleware.ts noEmit
+import type { Middleware } from '@reduxjs/toolkit'
+export const thunkMiddleware: Middleware =
+  ({ dispatch, getState }) =>
+  next =>
+  action => {
+    if (typeof action === 'function') {
+      return action(dispatch, getState)
+    }
+    return next(action)
+  }
+// file: thunkMiddleware.test.ts
+import { test, expect, vi } from 'vitest'
+import type { Dispatch, UnknownAction } from '@reduxjs/toolkit'
+import { thunkMiddleware } from './thunkMiddleware'
+
 const create = () => {
   const store = {
-    getState: jest.fn(() => ({})),
-    dispatch: jest.fn()
+    getState: vi.fn(() => ({})),
+    dispatch: vi.fn() as Dispatch
   }
-  const next = jest.fn()
+  const next = vi.fn()
 
-  const invoke = action => thunkMiddleware(store)(next)(action)
+  const invoke = (action: unknown) =>
+    thunkMiddleware(store)(next)(action as UnknownAction)
 
   return { store, next, invoke }
 }
@@ -829,7 +1056,7 @@ const create = () => {
 
 We test that our middleware is calling the `getState`, `dispatch`, and `next` functions at the right time.
 
-```js
+```ts title="thunkMiddleware.test.ts" no-transpile
 test('passes through non-function action', () => {
   const { next, invoke } = create()
   const action = { type: 'TEST' }
@@ -839,18 +1066,18 @@ test('passes through non-function action', () => {
 
 test('calls the function', () => {
   const { invoke } = create()
-  const fn = jest.fn()
+  const fn = vi.fn()
   invoke(fn)
   expect(fn).toHaveBeenCalled()
 })
 
 test('passes dispatch and getState', () => {
   const { store, invoke } = create()
-  invoke((dispatch, getState) => {
-    dispatch('TEST DISPATCH')
+  invoke((dispatch: Dispatch, getState: () => unknown) => {
+    dispatch({ type: 'TEST DISPATCH' })
     getState()
   })
-  expect(store.dispatch).toHaveBeenCalledWith('TEST DISPATCH')
+  expect(store.dispatch).toHaveBeenCalledWith({ type: 'TEST DISPATCH' })
   expect(store.getState).toHaveBeenCalled()
 })
 ```
@@ -860,6 +1087,5 @@ In some cases, you will need to modify the `create` function to use different mo
 ## Further Information
 
 - [React Testing Library](https://testing-library.com/docs/react-testing-library/intro): React Testing Library is a very light-weight solution for testing React components. It provides light utility functions on top of react-dom and react-dom/test-utils, in a way that encourages better testing practices. Its primary guiding principle is: "The more your tests resemble the way your software is used, the more confidence they can give you."
-- [React Test Utils](https://reactjs.org/docs/test-utils.html): ReactTestUtils makes it easy to test React components in the testing framework of your choice. React Testing Library uses the `act` function exported by React Test Utils.
 - [Blogged Answers: The Evolution of Redux Testing Approaches](https://blog.isquaredsoftware.com/2021/06/the-evolution-of-redux-testing-approaches/): Mark Erikson's thoughts on how Redux testing has evolved from 'isolation' to 'integration'.
 - [Testing Implementation Details](https://kentcdodds.com/blog/testing-implementation-details): Blog post by Kent C. Dodds on why he recommends to avoid testing implementation details.

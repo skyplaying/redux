@@ -12,7 +12,6 @@ module.exports = {
     Tutorials: [
       'tutorials/tutorials-index',
       'tutorials/quick-start',
-      'tutorials/typescript-quick-start',
       {
         type: 'category',
         label: 'Redux Essentials',
@@ -51,9 +50,19 @@ module.exports = {
         collapsed: false,
         items: [
           'usage/configuring-your-store',
+          'usage/nextjs',
           'usage/code-splitting',
           'usage/server-rendering',
           'usage/isolating-redux-sub-apps'
+        ]
+      },
+      {
+        type: 'category',
+        label: 'Migrations',
+        collapsed: false,
+        items: [
+          'usage/migrating-to-modern-redux',
+          'usage/migrations/migrating-rtk-2'
         ]
       },
       {
@@ -63,7 +72,8 @@ module.exports = {
         items: [
           'usage/usage-with-typescript',
           'usage/writing-tests',
-          'usage/troubleshooting'
+          'usage/troubleshooting',
+          'usage/debugging'
         ]
       },
       {
@@ -93,6 +103,8 @@ module.exports = {
           'usage/reducing-boilerplate',
           'usage/deriving-data-selectors',
           'usage/writing-logic-thunks',
+          'usage/side-effects-approaches',
+          'usage/writing-custom-middleware',
           'usage/implementing-undo-history'
         ]
       }
@@ -111,6 +123,7 @@ module.exports = {
         type: 'category',
         label: 'History and Design',
         items: [
+          'understanding/history-and-design/history-of-redux',
           'understanding/history-and-design/prior-art',
           'understanding/history-and-design/middleware'
         ]
@@ -138,8 +151,9 @@ module.exports = {
       'api/combinereducers',
       'api/applymiddleware',
       'api/bindactioncreators',
-      'api/compose'
-    ],
-    'Redux Toolkit': ['redux-toolkit/overview']
+      'api/compose',
+      'api/utils',
+      'api/errors'
+    ]
   }
 }

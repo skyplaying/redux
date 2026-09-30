@@ -4,7 +4,12 @@ title: Reusing Reducer Logic
 description: 'Structuring Reducers > Reusing Reducer Logic: Patterns for creating reusable reducers'
 ---
 
+<!-- prettier-ignore -->
+import HandWrittenReducersNote from "../../components/_HandWrittenReducersNote.mdx";
+
 # Reusing Reducer Logic
+
+<HandWrittenReducersNote />
 
 As an application grows, common patterns in reducer logic will start to emerge. You may find several parts of your reducer logic doing the same kinds of work for different types of data, and want to reduce duplication by reusing the same common logic for each data type. Or, you may want to have multiple "instances" of a certain type of data being handled in the store. However, the global structure of a Redux store comes with some trade-offs: it makes it easy to track the overall state of an application, but can also make it harder to "target" actions that need to update a specific piece of state, particularly if you are using `combineReducers`.
 
@@ -126,26 +131,70 @@ You could even go as far as to make a generic filtering higher-order reducer:
 
 ```js
 function createFilteredReducer(reducerFunction, reducerPredicate) {
-    return (state, action) => {
-        const isInitializationCall = state === undefined;
-        const shouldRunWrappedReducer = reducerPredicate(action) || isInitializationCall;
-        return shouldRunWrappedReducer ? reducerFunction(state, action) : state;
-    }
+  return (state, action) => {
+    const isInitializationCall = state === undefined
+    const shouldRunWrappedReducer =
+      reducerPredicate(action) || isInitializationCall
+    return shouldRunWrappedReducer ? reducerFunction(state, action) : state
+  }
 }
 
 const rootReducer = combineReducers({
-    // check for suffixed strings
-    counterA : createFilteredReducer(counter, action => action.type.endsWith('_A')),
-    // check for extra data in the action
-    counterB : createFilteredReducer(counter, action => action.name === 'B'),
-    // respond to all 'INCREMENT' actions, but never 'DECREMENT'
-    counterC : createFilteredReducer(counter, action => action.type === 'INCREMENT')
-};
+  // check for suffixed strings
+  counterA: createFilteredReducer(counter, action =>
+    action.type.endsWith('_A')
+  ),
+  // check for extra data in the action
+  counterB: createFilteredReducer(counter, action => action.name === 'B'),
+  // respond to all 'INCREMENT' actions, but never 'DECREMENT'
+  counterC: createFilteredReducer(
+    counter,
+    action => action.type === 'INCREMENT'
+  )
+})
 ```
 
-These basic patterns allow you to do things like having multiple instances of a smart connected component within the UI, or reuse common logic for generic capabilities such as pagination or sorting.
+These basic patterns allow you to do things like having multiple instances of a store-connected component within the UI, or reuse common logic for generic capabilities such as pagination or sorting.
 
-In addition to generating reducers this way, you might also want to generate action creators using the same approach, and could generate them both at the same time with helper functions. See [Action/Reducer Generators](https://github.com/markerikson/redux-ecosystem-links/blob/master/action-reducer-generators.md) and [Reducers](https://github.com/markerikson/redux-ecosystem-links/blob/master/reducers.md) libraries for action/reducer utilities.
+In addition to generating reducers this way, you might also want to generate action creators using the same approach, and could generate them both at the same time with helper functions.
+
+## Reusing Logic with a `createSlice` Factory
+
+With Redux Toolkit, the "generate prefixed action types" approach falls out of `createSlice` for free. Every action type a slice generates is prefixed with the slice's `name`, so a function that calls `createSlice` with a different name each time produces reducers that only respond to their own actions, along with matching action creators:
+
+```ts
+import { configureStore, createSlice } from '@reduxjs/toolkit'
+
+function makeCounterSlice(name: string) {
+  return createSlice({
+    name,
+    initialState: 0,
+    reducers: {
+      incremented: state => state + 1,
+      decremented: state => state - 1
+    }
+  })
+}
+
+const counterA = makeCounterSlice('counterA')
+const counterB = makeCounterSlice('counterB')
+const counterC = makeCounterSlice('counterC')
+
+const store = configureStore({
+  reducer: {
+    counterA: counterA.reducer,
+    counterB: counterB.reducer,
+    counterC: counterC.reducer
+  }
+})
+
+store.dispatch(counterB.actions.incremented())
+// dispatches { type: 'counterB/incremented' }
+console.log(store.getState())
+// { counterA: 0, counterB: 1, counterC: 0 }
+```
+
+This is the `createCounterWithNamedType` pattern from above, with the action types and action creators generated for you. If you need several slices to share reducer logic but keep separate action types, define the case reducer functions once and pass them into each `createSlice` call.
 
 ## Collection / Item Reducer Pattern
 
@@ -153,35 +202,39 @@ This pattern allows you to have multiple states and use a common reducer to upda
 
 ```js
 function counterReducer(state, action) {
-    switch(action.type) {
-        case "INCREMENT" : return state + 1;
-        case "DECREMENT" : return state - 1;
-    }
+  switch (action.type) {
+    case 'INCREMENT':
+      return state + 1
+    case 'DECREMENT':
+      return state - 1
+    default:
+      return state
+  }
 }
 
 function countersArrayReducer(state, action) {
-    switch(action.type) {
-        case "INCREMENT":
-        case "DECREMENT":
-            return state.map( (counter, index) => {
-                if(index !== action.index) return counter;
-                return counterReducer(counter, action);
-            });
-        default:
-            return state;
-    }
+  switch (action.type) {
+    case 'INCREMENT':
+    case 'DECREMENT':
+      return state.map((counter, index) => {
+        if (index !== action.index) return counter
+        return counterReducer(counter, action)
+      })
+    default:
+      return state
+  }
 }
 
 function countersMapReducer(state, action) {
-    switch(action.type) {
-        case "INCREMENT":
-        case "DECREMENT":
-            return {
-                ...state,
-                state[action.name] : counterReducer(state[action.name], action)
-            };
-        default:
-            return state;
-    }
+  switch (action.type) {
+    case 'INCREMENT':
+    case 'DECREMENT':
+      return {
+        ...state,
+        [action.name]: counterReducer(state[action.name], action)
+      }
+    default:
+      return state
+  }
 }
 ```

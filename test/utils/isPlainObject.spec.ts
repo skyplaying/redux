@@ -1,5 +1,4 @@
-import { expect } from 'expect'
-import isPlainObject from '../../src/utils/isPlainObject'
+import isPlainObject from '@internal/utils/isPlainObject'
 import vm from 'vm'
 
 describe('isPlainObject', () => {
@@ -13,5 +12,6 @@ describe('isPlainObject', () => {
     expect(isPlainObject(null)).toBe(false)
     expect(isPlainObject(undefined)).toBe(false)
     expect(isPlainObject({ x: 1, y: 2 })).toBe(true)
+    expect(isPlainObject(Object.create(null))).toBe(true)
   })
 })

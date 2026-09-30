@@ -3,46 +3,32 @@ id: api-reference
 title: API Reference
 ---
 
+<!-- prettier-ignore -->
+import CoreApiNote from "../components/_CoreApiNote.mdx";
+
 # API Reference
 
-The Redux API surface is tiny. Redux defines a set of contracts for you to implement (such as [reducers](../understanding/thinking-in-redux/Glossary.md#reducer)) and provides a few helper functions to tie these contracts together.
+This section documents the original Redux core API. The Redux core is small - it defines a set of contracts for you to implement (such as [reducers](../understanding/thinking-in-redux/Glossary.md#reducer)) and provides a few helper functions to tie these contracts together.
 
-This section documents the complete Redux API. Keep in mind that Redux is only concerned with managing the state. In a real app, you'll also want to use UI bindings like [react-redux](https://github.com/gaearon/react-redux).
+<CoreApiNote />
 
-### Top-Level Exports
+Redux Toolkit re-exports all of the APIs included in the `redux` package, so you don't need to install `redux` separately. The original [`createStore`](createStore.md) method is deprecated in favor of `configureStore`, but will continue to work indefinitely.
 
-- [createStore(reducer, [preloadedState], [enhancer])](createStore.md)
+For the APIs you'll use day to day, see the [Redux Toolkit API docs](/toolkit) and the [React-Redux API docs](/react-redux).
+
+## Top-Level Exports
+
+- [createStore(reducer, preloadedState?, enhancer?)](createStore.md)
 - [combineReducers(reducers)](combineReducers.md)
 - [applyMiddleware(...middlewares)](applyMiddleware.md)
 - [bindActionCreators(actionCreators, dispatch)](bindActionCreators.md)
 - [compose(...functions)](compose.md)
+- [Utility functions](utils.md): `isAction`, `isPlainObject`
 
-### Store API
+## Store API
 
 - [Store](Store.md)
-  - [getState()](Store.md#getState)
+  - [getState()](Store.md#getstate)
   - [dispatch(action)](Store.md#dispatchaction)
   - [subscribe(listener)](Store.md#subscribelistener)
   - [replaceReducer(nextReducer)](Store.md#replacereducernextreducer)
-
-### Importing
-
-Every function described above is a top-level export. You can import any of them like this:
-
-#### ES6
-
-```js
-import { createStore } from 'redux'
-```
-
-#### ES5 (CommonJS)
-
-```js
-var createStore = require('redux').createStore
-```
-
-#### ES5 (UMD build)
-
-```js
-var createStore = Redux.createStore
-```

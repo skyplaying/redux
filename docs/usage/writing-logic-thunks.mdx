@@ -25,7 +25,7 @@ For Redux specifically, **"thunks" are a pattern of writing functions with logic
 
 Using thunks requires the [`redux-thunk` middleware](https://github.com/reduxjs/redux-thunk) to be added to the Redux store as part of its configuration.
 
-Thunks are [the standard approach for writing async logic in Redux apps](../style-guide/style-guide.md#use-thunks-for-async-logic), and are commonly used for data fetching. However, they can be used for a variety of tasks, and can contain both synchronous and asynchronous logic.
+Thunks are [a standard approach for writing async logic in Redux apps](../style-guide/style-guide.md#use-thunks-and-listeners-for-other-async-logic), and are commonly used for data fetching. However, they can be used for a variety of tasks, and can contain both synchronous and asynchronous logic.
 
 ### Writing Thunks
 
@@ -90,7 +90,7 @@ In a sense, a thunk is a loophole where **you can write any code that needs to i
 
 Historically, another reason to use thunks was to help keep React components "unaware of Redux". The `connect` API allowed passing action creators and "binding" them to automatically dispatch actions when called. Since components typically did not have access to `dispatch` internally, passing thunks to `connect` made it possible for components to just call `this.props.doSomething()`, without needing to know if it was a callback from a parent, dispatching a plain Redux action, dispatching a thunk performing sync or async logic, or a mock function in a test.
 
-With the arrival of [the React-Redux hooks API](https://react-redux.js.org/api/hooks), that situation has changed. The community has switched away from the "container/presentational" pattern in general, and [components now have access to `dispatch` directly via the `useDispatch` hook](../tutorials/fundamentals/part-5-ui-and-react.md#dispatching-actions-with-usedispatch). This _does_ mean that it's possible to have more logic directly inside of a component, such as an async fetch + dispatch of the results. However, thunks have access to `getState`, which components do not, and there's still value in moving that logic outside of components.
+With the arrival of [the React-Redux hooks API](/react-redux/api/hooks), that situation has changed. The community has switched away from the "container/presentational" pattern in general, and [components now have access to `dispatch` directly via the `useDispatch` hook](../tutorials/fundamentals/part-5-ui-and-react.md#dispatching-actions-with-usedispatch). This _does_ mean that it's possible to have more logic directly inside of a component, such as an async fetch + dispatch of the results. However, thunks have access to `getState`, which components do not, and there's still value in moving that logic outside of components.
 
 </DetailedExplanation>
 
@@ -103,7 +103,7 @@ Because thunks are a general-purpose tool that can contain arbitrary logic, they
 - Writing logic that needs to dispatch multiple actions in a row or over time
 - Writing logic that needs access to `getState` to make decisions or include other state values in an action
 
-Thunks are "one-shot" functions, with no sense of a lifecycle. They also cannot see other dispatched actions. So, they should not generally be used for initializing persistent connections like websockets, and you can't use them to respond to other actions.
+Thunks are "one-shot" functions, with no sense of a lifecycle. They also cannot see other dispatched actions. So, they should not generally be used for initializing persistent connections like websockets, and you can't use them to respond to other actions. For those cases, use Redux Toolkit's [listener middleware](/toolkit/api/createListenerMiddleware), which runs logic in response to dispatched actions or state changes. See [Side Effects Approaches](./side-effects-approaches.mdx) for a comparison.
 
 **Thunks are best used for complex synchronous logic, and simple to moderate async logic such as making a standard AJAX request and dispatching actions based on the request results.**
 
@@ -163,14 +163,14 @@ In other words:
 The thunk middleware does have one customization option. You can create a custom instance of the thunk middleware at setup time, and inject an "extra argument" into the middleware. The middleware will then inject that extra value as the third argument of every thunk function. This is most commonly used for injecting an API service layer into thunk functions, so that they don't have hardcoded dependencies on the API methods:
 
 ```js title="Thunk setup with an extra argument"
-import thunkMiddleware from 'redux-thunk'
+import { withExtraArgument } from 'redux-thunk'
 
 const serviceApi = createServiceApi('/some/url')
 
-const thunkMiddlewareWithArg = thunkMiddleware.withExtraArgument({ serviceApi })
+const thunkMiddlewareWithArg = withExtraArgument({ serviceApi })
 ```
 
-Redux Toolkit's `configureStore` supports [this as part of its middleware customization in `getDefaultMiddleware`](https://redux-toolkit.js.org/api/getDefaultMiddleware):
+Redux Toolkit's `configureStore` supports [this as part of its middleware customization in `getDefaultMiddleware`](/toolkit/api/getDefaultMiddleware):
 
 ```js title="Thunk extra argument with configureStore"
 const store = configureStore({
@@ -365,6 +365,47 @@ const onClick = () => {
 
 This is not a _recommended_ practice per se, but it's semantically legal and will work fine.
 
+### Typing Thunks
+
+The default `Dispatch` type from the Redux core doesn't know about thunks, so `dispatch(someThunk())` is a type error unless the dispatch type includes the thunk middleware. The usual setup is to derive `AppDispatch` from the store, define an `AppThunk` type for hand-written thunks, and use a pre-typed `useAppDispatch` hook in components:
+
+```ts title="Typing hand-written thunks" no-transpile
+// app/store.ts
+import { configureStore } from '@reduxjs/toolkit'
+import type { Action, ThunkAction } from '@reduxjs/toolkit'
+
+export const store = configureStore({ reducer: rootReducer })
+
+export type RootState = ReturnType<typeof store.getState>
+export type AppDispatch = typeof store.dispatch
+export type AppThunk<ReturnType = void> = ThunkAction<
+  ReturnType,
+  RootState,
+  unknown,
+  Action
+>
+
+// app/hooks.ts
+import { useDispatch, useSelector } from 'react-redux'
+export const useAppDispatch = useDispatch.withTypes<AppDispatch>()
+export const useAppSelector = useSelector.withTypes<RootState>()
+
+// features/todos/todosSlice.ts
+export const addTodosIfAllowed =
+  (todoText: string): AppThunk =>
+  (dispatch, getState) => {
+    if (selectCanAddNewTodo(getState(), MAX_TODOS)) {
+      dispatch(todoAdded(todoText))
+    }
+  }
+
+// in a component
+const dispatch = useAppDispatch()
+dispatch(addTodosIfAllowed('Buy milk'))
+```
+
+`configureStore` infers the dispatch type from its middleware, so `AppDispatch` already includes the thunk middleware's overload. See [Usage with TypeScript](./UsageWithTypescript.md#define-root-state-and-dispatch-types) for the full setup.
+
 ## Using `createAsyncThunk`
 
 Writing async logic with thunks can be somewhat tedious. Each thunk typically requires defining three different action types + matching action creators for "pending/fulfilled/rejected", plus the actual thunk action creator + thunk function. There's also the edge cases with error handling to deal with.
@@ -410,13 +451,13 @@ const todosSlice = createSlice({
 
 ## Fetching Data with RTK Query
 
-Redux Toolkit has a new [**RTK Query data fetching API**](https://redux-toolkit.js.org/rtk-query/overview). RTK Query is a purpose built data fetching and caching solution for Redux apps, and **can eliminate the need to write _any_ thunks or reducers to manage data fetching**.
+Redux Toolkit includes the [**RTK Query data fetching API**](/toolkit/rtk-query/overview). RTK Query is a purpose built data fetching and caching solution for Redux apps, and **can eliminate the need to write _any_ thunks or reducers to manage data fetching**.
 
 RTK Query actually uses `createAsyncThunk` internally for all requests, along with a custom middleware to manage cache data lifetimes.
 
 First, create an "API slice" with definitions for the server endpoints your app will talk to. Each endpoint will auto-generate a React hook with a name based on the endpoint and request type, like `useGetPokemonByNameQuery`:
 
-```js title="RTK Query: API slice (pokemonSlice.js)"
+```js title="RTK Query: API slice (services/pokemon.js)"
 import { createApi, fetchBaseQuery } from '@reduxjs/toolkit/query/react'
 
 export const pokemonApi = createApi({
